@@ -1,0 +1,28 @@
+{
+  "supplier_name": "Acme Industrial Supply Inc.",
+  "supplier_tax_id": "US-84-1234567",
+  "invoice_number": "ACM-2026-0433",
+  "po_number": "PO-1002",
+  "issue_date": "2026-10-20",
+  "due_date": "2026-11-19",
+  "currency": "USD",
+  "subtotal": "$850.00",
+  "tax": "$0.00",
+  "total": "$850.00",
+  "payment_terms": "Net 30",
+  "ship_from": {
+    "line1": "350 5th Ave",
+    "city": "New York",
+    "postal_code": "10118",
+    "country": "US"
+  },
+  "lines": [
+    {
+      "sku": "ACM-500",
+      "description": "Anchor bolt M12",
+      "quantity": 1000,
+      "unit_price": "$0.85",
+      "line_total": "$850.00"
+    }
+  ]
+}

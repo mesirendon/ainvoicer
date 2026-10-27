@@ -24,6 +24,8 @@ go test -race ./internal/money -run TestParseMinor/three_decimals   # single tes
 docker compose run --rm migrate    # re-run migrations (idempotent)
 docker compose run --rm seed       # re-run seed (idempotent)
 cd web && npm run build            # vue-tsc type check + vite build
+go run ./cmd/api extract-check samples/01-clean-usd.pdf   # print extraction output (Claude if ANTHROPIC_API_KEY is set, else fixture)
+go run ./cmd/genfixtures [-today YYYY-MM-DD]               # regenerate samples/*.pdf + .expected.json (dates relative to -today)
 ```
 
 Ports: web 8080, api 3000, payment-mock 4000, postgres 5432. `postgis/postgis` runs as `linux/amd64` (emulated on Apple Silicon). Tool versions: Go 1.27, golangci-lint v2, mockery v3.
@@ -52,7 +54,8 @@ The LLM only reads documents (extraction) and optionally drafts text. Every deci
 - `cmd/payment-mock`: a separate Gin service that owns the `payment_mock` schema; the API never reads that schema. It stores the full destination account (the provider is the regulated party that holds payment details), but logs only the last 4 digits. While a `2222` call is sleeping, the mock keeps an in-memory (unrecorded) in-flight marker, so a lookup for that key also hangs. The client sees the lookup as unreachable and marks the payment UNKNOWN. After the sleep ends, a lookup returns `NOT_FOUND`, which the reconciler resolves to FAILED.
 - Pure packages, table-tested, with no DB and no I/O: `internal/money`, `internal/matching`, `internal/fx`, and the scheduling rules in `internal/payments`.
 - Orchestration: `internal/invoices` (upload → extract → geocode → match + decide + schedule) and `internal/payments` (executor and reconciler). Each declares the small interfaces it consumes (`Extractor`, `Geocoder`, `Store`, `Gateway`).
-- `internal/extraction`: `ClaudeExtractor` (forced tool call, one retry with the validation error fed back) and `FixtureExtractor`, which is used when `ANTHROPIC_API_KEY` is empty and loads `samples/<name>.expected.json`. Both pass through the same `RawInvoice` → `ExtractedInvoice` conversion and validation.
+- `internal/extraction`: `ClaudeExtractor` and `FixtureExtractor`; the fixture one is used when `ANTHROPIC_API_KEY` is empty and loads `samples/<name>.expected.json`. Both go through `extraction.Parse` (`RawInvoice` → `ExtractedInvoice` plus validation). Validation failures wrap `extraction.ErrInvalid`; any other error is an upstream failure. Claude is asked to call the `record_invoice` tool with `strict: true` and `tool_choice: auto`, because `claude-sonnet-5-5` rejects a forced `tool_choice` with a 400. A missing tool call or an invalid result gets one retry, with the error sent back as a `tool_result` marked `is_error`.
+- `cmd/genfixtures`: generates the sample PDFs (fpdf, three layouts: classic, modern, Spanish factura) and their `.expected.json` from the same data, so the two always agree. The dates are relative to the run day, so regenerate the samples before a demo. The output is deterministic for a given `-today`.
 - `web/`: Vue 3 + strict TypeScript + vue-router; no UI library and no Pinia. `src/api.ts` is the typed fetch wrapper. JSON carries amounts as integer minor units, and the UI formats them only for display. In compose, nginx serves the bundle and proxies `/api/` to the api service. `/health` is also served at `/api/health` for that reason.
 
 ## Testing and mocks

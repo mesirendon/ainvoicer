@@ -1,0 +1,28 @@
+{
+  "supplier_name": "Acme Industrial Supply Inc.",
+  "supplier_tax_id": "US-84-1234567",
+  "invoice_number": "ACM-2026-0431",
+  "po_number": "PO-1002",
+  "issue_date": "2026-10-17",
+  "due_date": "2026-11-16",
+  "currency": "USD",
+  "subtotal": "$2,160.00",
+  "tax": "$0.00",
+  "total": "$2,160.00",
+  "payment_terms": "Net 30",
+  "ship_from": {
+    "line1": "2200 Ross Ave",
+    "city": "Dallas",
+    "postal_code": "75201",
+    "country": "US"
+  },
+  "lines": [
+    {
+      "sku": "ACM-400",
+      "description": "Galvanized steel bracket",
+      "quantity": 500,
+      "unit_price": "$4.32",
+      "line_total": "$2,160.00"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ ./cmd/...
 
 FROM gcr.io/distroless/static-debian12:nonroot AS api
 COPY --from=build /out/api /api
+COPY --chown=nonroot:nonroot samples /samples
 EXPOSE 3000
 ENTRYPOINT ["/api"]
 

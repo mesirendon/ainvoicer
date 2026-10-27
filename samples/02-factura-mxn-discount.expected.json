@@ -1,0 +1,35 @@
+{
+  "supplier_name": "Textiles del Norte S.A. de C.V.",
+  "supplier_tax_id": "TNO980512AB3",
+  "invoice_number": "TDN-F-00871",
+  "po_number": "PO-2001",
+  "issue_date": "2026-10-24",
+  "due_date": "2026-11-23",
+  "currency": "MXN",
+  "subtotal": "$171,000.00",
+  "tax": "$27,360.00",
+  "total": "$198,360.00",
+  "payment_terms": "2/10 neto 30",
+  "ship_from": {
+    "line1": "Av. Constitución 400",
+    "city": "Monterrey",
+    "postal_code": "64000",
+    "country": "MX"
+  },
+  "lines": [
+    {
+      "sku": "TDN-01",
+      "description": "Tela de algodón, rollo de 50 m",
+      "quantity": 40,
+      "unit_price": "$3,250.00",
+      "line_total": "$130,000.00"
+    },
+    {
+      "sku": "TDN-02",
+      "description": "Hilo de poliéster, caja",
+      "quantity": 100,
+      "unit_price": "$410.00",
+      "line_total": "$41,000.00"
+    }
+  ]
+}

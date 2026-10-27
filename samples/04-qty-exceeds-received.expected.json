@@ -1,0 +1,28 @@
+{
+  "supplier_name": "Acme Industrial Supply Inc.",
+  "supplier_tax_id": "US-84-1234567",
+  "invoice_number": "ACM-2026-0432",
+  "po_number": "PO-1002",
+  "issue_date": "2026-10-18",
+  "due_date": "2026-11-17",
+  "currency": "USD",
+  "subtotal": "$5,200.00",
+  "tax": "$0.00",
+  "total": "$5,200.00",
+  "payment_terms": "Net 30",
+  "ship_from": {
+    "line1": "2200 Ross Ave",
+    "city": "Dallas",
+    "postal_code": "75201",
+    "country": "US"
+  },
+  "lines": [
+    {
+      "sku": "ACM-600",
+      "description": "Pneumatic control valve",
+      "quantity": 80,
+      "unit_price": "$65.00",
+      "line_total": "$5,200.00"
+    }
+  ]
+}

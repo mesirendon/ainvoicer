@@ -1,0 +1,42 @@
+{
+  "supplier_name": "Acme Industrial Supply Inc.",
+  "supplier_tax_id": "US-84-1234567",
+  "invoice_number": "ACM-2026-0412",
+  "po_number": "PO-1001",
+  "issue_date": "2026-10-15",
+  "due_date": "2026-11-14",
+  "currency": "USD",
+  "subtotal": "5,582.50",
+  "tax": "0.00",
+  "total": "5,582.50",
+  "payment_terms": "Net 30",
+  "ship_from": {
+    "line1": "1200 Smith Street",
+    "city": "Houston",
+    "postal_code": "77002",
+    "country": "US"
+  },
+  "lines": [
+    {
+      "sku": "ACM-100",
+      "description": "Industrial ball bearing 6204",
+      "quantity": 200,
+      "unit_price": "12.50",
+      "line_total": "2,500.00"
+    },
+    {
+      "sku": "ACM-200",
+      "description": "Hydraulic hose 1/2 in x 10 ft",
+      "quantity": 50,
+      "unit_price": "48.00",
+      "line_total": "2,400.00"
+    },
+    {
+      "sku": "ACM-300",
+      "description": "Nitrile safety gloves, box of 100",
+      "quantity": 30,
+      "unit_price": "22.75",
+      "line_total": "682.50"
+    }
+  ]
+}

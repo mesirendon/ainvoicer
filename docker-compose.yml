@@ -49,6 +49,7 @@ services:
     environment:
       <<: *db-env
       PAYMENT_MOCK_URL: http://payment-mock:4000
+      SAMPLES_DIR: /samples
     ports:
       - "3000:3000"
     depends_on:

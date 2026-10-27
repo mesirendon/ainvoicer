@@ -1,0 +1,35 @@
+{
+  "supplier_name": "Gulf Marine Parts Corp.",
+  "supplier_tax_id": "US-59-8889900",
+  "invoice_number": "GMP-7781",
+  "po_number": "PO-6001",
+  "issue_date": "2026-09-28",
+  "due_date": "2026-10-28",
+  "currency": "USD",
+  "subtotal": "$2,500.00",
+  "tax": "$0.00",
+  "total": "$2,500.00",
+  "payment_terms": "Net 30",
+  "ship_from": {
+    "line1": "701 Brickell Ave",
+    "city": "Miami",
+    "postal_code": "33131",
+    "country": "US"
+  },
+  "lines": [
+    {
+      "sku": "GMP-1",
+      "description": "Marine fuel filter",
+      "quantity": 50,
+      "unit_price": "$37.40",
+      "line_total": "$1,870.00"
+    },
+    {
+      "sku": "GMP-2",
+      "description": "Stainless hose clamp",
+      "quantity": 300,
+      "unit_price": "$2.10",
+      "line_total": "$630.00"
+    }
+  ]
+}

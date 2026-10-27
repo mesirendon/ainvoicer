@@ -23,6 +23,17 @@ func main() {
 		slog.Error("config", "error", err)
 		os.Exit(1)
 	}
+	if len(os.Args) > 1 && os.Args[1] == "extract-check" {
+		if len(os.Args) != 3 {
+			fmt.Fprintln(os.Stderr, "usage: api extract-check <file.pdf>")
+			os.Exit(2)
+		}
+		if err := extractCheck(cfg, os.Args[2]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
 		if err := healthcheck.Probe(cfg.APIPort); err != nil {
 			fmt.Fprintln(os.Stderr, err)

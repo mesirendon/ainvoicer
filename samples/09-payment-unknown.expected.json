@@ -1,0 +1,35 @@
+{
+  "supplier_name": "Lakeshore Packaging Co.",
+  "supplier_tax_id": "US-36-5550123",
+  "invoice_number": "LSP-30419",
+  "po_number": "PO-5001",
+  "issue_date": "2026-10-13",
+  "due_date": "2026-10-28",
+  "currency": "USD",
+  "subtotal": "3,980.00",
+  "tax": "0.00",
+  "total": "3,980.00",
+  "payment_terms": "Net 15",
+  "ship_from": {
+    "line1": "233 S Wacker Dr",
+    "city": "Chicago",
+    "postal_code": "60606",
+    "country": "US"
+  },
+  "lines": [
+    {
+      "sku": "LKP-1",
+      "description": "Corrugated shipping box 40x30x30",
+      "quantity": 2000,
+      "unit_price": "1.15",
+      "line_total": "2,300.00"
+    },
+    {
+      "sku": "LKP-2",
+      "description": "Stretch film roll 500 mm",
+      "quantity": 120,
+      "unit_price": "14.00",
+      "line_total": "1,680.00"
+    }
+  ]
+}

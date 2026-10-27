@@ -1,0 +1,35 @@
+{
+  "supplier_name": "Pacific Coast Electronics LLC",
+  "supplier_tax_id": "US-95-7654321",
+  "invoice_number": "PCE-55120",
+  "po_number": "PO-4001",
+  "issue_date": "2026-10-19",
+  "due_date": "2026-11-18",
+  "currency": "USD",
+  "subtotal": "3,118.00",
+  "tax": "0.00",
+  "total": "3,118.00",
+  "payment_terms": "Net 30",
+  "ship_from": {
+    "line1": "350 S Grand Ave",
+    "city": "Los Angeles",
+    "postal_code": "90071",
+    "country": "US"
+  },
+  "lines": [
+    {
+      "sku": "PCE-10",
+      "description": "LED driver 40 W",
+      "quantity": 100,
+      "unit_price": "18.18",
+      "line_total": "1,818.00"
+    },
+    {
+      "sku": "PCE-20",
+      "description": "Power cable 2 m",
+      "quantity": 200,
+      "unit_price": "6.50",
+      "line_total": "1,300.00"
+    }
+  ]
+}
