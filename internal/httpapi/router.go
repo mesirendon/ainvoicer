@@ -17,7 +17,7 @@ func NewEngine() *gin.Engine {
 	router := gin.New()
 	router.Use(RequestID(), AccessLog(), Recover())
 	router.NoRoute(func(c *gin.Context) {
-		writeError(c, http.StatusNotFound, "NOT_FOUND", "route not found", nil)
+		WriteError(c, http.StatusNotFound, "NOT_FOUND", "route not found", nil)
 	})
 	return router
 }
@@ -32,8 +32,8 @@ func NewRouter(health HealthChecker) *gin.Engine {
 func Health(health HealthChecker) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := health.Ping(c.Request.Context()); err != nil {
-			slog.WarnContext(c.Request.Context(), "health check failed", "request_id", c.GetString(requestIDKey), "error", err)
-			writeError(c, http.StatusServiceUnavailable, "DATABASE_UNAVAILABLE", "database is not reachable", nil)
+			slog.WarnContext(c.Request.Context(), "health check failed", "request_id", RequestIDFrom(c), "error", err)
+			WriteError(c, http.StatusServiceUnavailable, "DATABASE_UNAVAILABLE", "database is not reachable", nil)
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})

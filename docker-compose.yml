@@ -54,8 +54,29 @@ services:
     depends_on:
       seed:
         condition: service_completed_successfully
+      payment-mock:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "/api", "healthcheck"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  payment-mock:
+    build:
+      context: .
+      target: payment-mock
+    env_file:
+      - path: .env
+        required: false
+    environment: *db-env
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/payment-mock", "healthcheck"]
       interval: 3s
       timeout: 3s
       retries: 20

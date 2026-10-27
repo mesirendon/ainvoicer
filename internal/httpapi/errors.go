@@ -14,6 +14,6 @@ type errorDetail struct {
 	Details any    `json:"details,omitempty"`
 }
 
-func writeError(c *gin.Context, status int, code, message string, details any) {
+func WriteError(c *gin.Context, status int, code, message string, details any) {
 	c.AbortWithStatusJSON(status, errorBody{Error: errorDetail{Code: code, Message: message, Details: details}})
 }

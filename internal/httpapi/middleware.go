@@ -33,7 +33,7 @@ func AccessLog() gin.HandlerFunc {
 			route = "unmatched"
 		}
 		slog.InfoContext(c.Request.Context(), "request",
-			"request_id", c.GetString(requestIDKey),
+			"request_id", RequestIDFrom(c),
 			"method", c.Request.Method,
 			"route", route,
 			"status", c.Writer.Status(),
@@ -50,16 +50,20 @@ func Recover() gin.HandlerFunc {
 					panic(r)
 				}
 				slog.ErrorContext(c.Request.Context(), "panic",
-					"request_id", c.GetString(requestIDKey),
+					"request_id", RequestIDFrom(c),
 					"panic", r,
 				)
 				if c.Writer.Written() {
 					c.Abort()
 					return
 				}
-				writeError(c, http.StatusInternalServerError, "INTERNAL", "internal server error", nil)
+				WriteError(c, http.StatusInternalServerError, "INTERNAL", "internal server error", nil)
 			}
 		}()
 		c.Next()
 	}
+}
+
+func RequestIDFrom(c *gin.Context) string {
+	return c.GetString(requestIDKey)
 }

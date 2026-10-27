@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -40,6 +39,7 @@ func main() {
 func run(cfg config.Config) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	context.AfterFunc(ctx, stop)
 
 	pool, err := db.Connect(ctx, cfg.DatabaseURL, &db.Limits{
 		LockTimeoutMS:      cfg.DBLockTimeoutMS,
@@ -51,33 +51,11 @@ func run(cfg config.Config) error {
 	}
 	defer pool.Close()
 
-	router := httpapi.NewRouter(pool)
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.APIPort),
-		Handler:           router,
+		Handler:           httpapi.NewRouter(pool),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-
-	serveErr := make(chan error, 1)
-	go func() {
-		slog.Info("api listening", "port", cfg.APIPort, "fixture_mode", cfg.FixtureMode())
-		serveErr <- server.ListenAndServe()
-	}()
-
-	select {
-	case err := <-serveErr:
-		if !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("listen: %w", err)
-		}
-	case <-ctx.Done():
-		stop()
-		slog.Info("shutting down")
-	}
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("shutdown: %w", err)
-	}
-	return nil
+	slog.Info("api starting", "fixture_mode", cfg.FixtureMode())
+	return httpapi.Serve(ctx, server)
 }

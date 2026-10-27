@@ -21,3 +21,8 @@ ENTRYPOINT ["/migrate"]
 FROM gcr.io/distroless/static-debian12:nonroot AS seed
 COPY --from=build /out/seed /seed
 ENTRYPOINT ["/seed"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS payment-mock
+COPY --from=build /out/payment-mock /payment-mock
+EXPOSE 4000
+ENTRYPOINT ["/payment-mock"]
