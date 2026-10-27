@@ -1,0 +1,14 @@
+all: false
+dir: '{{.InterfaceDir}}'
+filename: 'mock_{{.InterfaceName | snakecase}}_test.go'
+structname: 'Mock{{.InterfaceName}}'
+pkgname: '{{.SrcPackageName}}'
+template: testify
+formatter: goimports
+force-file-write: true
+include-auto-generated: false
+log-level: warn
+packages:
+  ap-agent/internal/httpapi:
+    interfaces:
+      HealthChecker: {}
