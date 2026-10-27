@@ -12,8 +12,12 @@ import (
 
 	"ap-agent/internal/config"
 	"ap-agent/internal/db"
+	"ap-agent/internal/geocode"
 	"ap-agent/internal/healthcheck"
 	"ap-agent/internal/httpapi"
+	"ap-agent/internal/invoices"
+	"ap-agent/internal/matching"
+	"ap-agent/internal/repo"
 )
 
 func main() {
@@ -62,9 +66,27 @@ func run(cfg config.Config) error {
 	}
 	defer pool.Close()
 
+	store := repo.New(pool, cfg.LeaseSeconds, cfg.LeaseSeconds+cfg.ExtractTimeoutMS/1000)
+	service := &invoices.Service{
+		Store:          store,
+		Extractor:      newExtractor(cfg),
+		Geocoder:       geocode.TableGeocoder{},
+		Tolerances:     matching.Tolerances{PriceBps: cfg.PriceToleranceBps, OriginKM: cfg.OriginToleranceKM},
+		ExtractTimeout: time.Duration(cfg.ExtractTimeoutMS) * time.Millisecond,
+		GeocodeTimeout: time.Duration(cfg.GeocoderTimeoutMS) * time.Millisecond,
+		SamplesDir:     cfg.SamplesDir,
+	}
+	router := httpapi.NewRouter(httpapi.Deps{
+		Health:         pool,
+		Invoices:       service,
+		Samples:        service,
+		PurchaseOrders: store,
+		MaxUploadBytes: int64(cfg.ExtractMaxFileMB) << 20,
+	})
+
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.APIPort),
-		Handler:           httpapi.NewRouter(pool),
+		Handler:           router,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	slog.Info("api starting", "fixture_mode", cfg.FixtureMode())

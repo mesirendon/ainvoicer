@@ -11,13 +11,10 @@ import (
 
 	"ap-agent/internal/config"
 	"ap-agent/internal/extraction"
+	"ap-agent/internal/invoices"
 )
 
-type extractor interface {
-	Extract(ctx context.Context, fileName string, pdf []byte) (extraction.ExtractedInvoice, error)
-}
-
-func newExtractor(cfg config.Config) extractor {
+func newExtractor(cfg config.Config) invoices.Extractor {
 	if cfg.FixtureMode() {
 		return extraction.NewFixtureExtractor(cfg.SamplesDir)
 	}

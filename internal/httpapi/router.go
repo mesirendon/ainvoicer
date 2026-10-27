@@ -6,10 +6,36 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"ap-agent/internal/invoices"
 )
 
 type HealthChecker interface {
 	Ping(ctx context.Context) error
+}
+
+type InvoiceService interface {
+	Process(ctx context.Context, fileName string, pdf []byte) (invoices.Detail, bool, error)
+	List(ctx context.Context) ([]invoices.Summary, error)
+	Get(ctx context.Context, id string) (invoices.Detail, error)
+	File(ctx context.Context, id string) (string, []byte, error)
+}
+
+type SampleService interface {
+	ListSamples(ctx context.Context) ([]invoices.Sample, error)
+	ProcessSample(ctx context.Context, name string) (invoices.Detail, bool, error)
+}
+
+type PurchaseOrderService interface {
+	ListPurchaseOrders(ctx context.Context) ([]invoices.PurchaseOrder, error)
+}
+
+type Deps struct {
+	Health         HealthChecker
+	Invoices       InvoiceService
+	Samples        SampleService
+	PurchaseOrders PurchaseOrderService
+	MaxUploadBytes int64
 }
 
 func NewEngine() *gin.Engine {
@@ -22,10 +48,21 @@ func NewEngine() *gin.Engine {
 	return router
 }
 
-func NewRouter(health HealthChecker) *gin.Engine {
+func NewRouter(d Deps) *gin.Engine {
 	router := NewEngine()
-	router.GET("/health", Health(health))
-	router.GET("/api/health", Health(health))
+	router.MaxMultipartMemory = d.MaxUploadBytes
+	router.GET("/health", Health(d.Health))
+
+	h := &handlers{deps: d}
+	api := router.Group("/api")
+	api.GET("/health", Health(d.Health))
+	api.POST("/invoices", h.uploadInvoice)
+	api.GET("/invoices", h.listInvoices)
+	api.GET("/invoices/:id", h.getInvoice)
+	api.GET("/invoices/:id/file", h.invoiceFile)
+	api.GET("/samples", h.listSamples)
+	api.POST("/samples/:name/process", h.processSample)
+	api.GET("/purchase-orders", h.listPurchaseOrders)
 	return router
 }
 

@@ -33,7 +33,7 @@ func TestHealth(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tt.path, nil)
-			NewRouter(health).ServeHTTP(rec, req)
+			NewRouter(Deps{Health: health}).ServeHTTP(rec, req)
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 			assert.JSONEq(t, tt.wantBody, rec.Body.String())
@@ -49,7 +49,7 @@ func TestRequestID_EchoesIncomingHeader(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/health", nil)
 	req.Header.Set("X-Request-Id", "abc-123")
-	NewRouter(health).ServeHTTP(rec, req)
+	NewRouter(Deps{Health: health}).ServeHTTP(rec, req)
 
 	assert.Equal(t, "abc-123", rec.Header().Get("X-Request-Id"))
 }
@@ -71,7 +71,7 @@ func TestRecover_ReturnsErrorJSON(t *testing.T) {
 func TestNoRoute_ReturnsErrorJSON(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/nope", nil)
-	NewRouter(NewMockHealthChecker(t)).ServeHTTP(rec, req)
+	NewRouter(Deps{Health: NewMockHealthChecker(t)}).ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 	assert.JSONEq(t, `{"error":{"code":"NOT_FOUND","message":"route not found"}}`, rec.Body.String())

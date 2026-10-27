@@ -12,3 +12,11 @@ packages:
   ap-agent/internal/httpapi:
     interfaces:
       HealthChecker: {}
+      InvoiceService: {}
+      SampleService: {}
+      PurchaseOrderService: {}
+  ap-agent/internal/invoices:
+    interfaces:
+      Extractor: {}
+      Geocoder: {}
+      Store: {}
