@@ -65,6 +65,16 @@ go run ./cmd/api extract-check samples/02-factura-mxn-discount.pdf          # pr
   - every HTTP handler, through `httptest` and the real Gin router.
 - **Not unit-tested:** repositories. Their SQL is exercised by `make demo`, which includes a 10-parallel-upload race check.
 
+## How it works page
+
+**How it works** in the header (http://localhost:8080/about) is interactive documentation for the whole project:
+- **Scenario player:** pick any of the 10 samples and watch it travel through the nine pipeline stages, from Upload to Settle. Each step shows that sample's real data: amounts as printed vs `int64` minor units, the finding message, the integer tolerance math, the FX quote, the provider's answer.
+- **Live architecture map:** the components taking part in the current step light up, and the connections between them animate. Clicking any component explains what it does and where it lives in the code.
+- **Run this sample for real:** processes the actual sample and opens its invoice detail.
+- **Controls:** ← → step through, space plays or pauses. Autoplay is off when the system asks for reduced motion.
+
+This is a fourth view on top of the three in the brief, added as an explanation aid. The scenario text lives in `web/src/about/scenarios.ts`; keep it in step with the samples and rules.
+
 ## Sample walkthrough
 
 Open http://localhost:8080 and process the samples from the **Try a sample** dropdown in this order. Each one goes through the same path as an upload.

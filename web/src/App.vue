@@ -24,6 +24,7 @@ onMounted(async () => {
     <nav>
       <RouterLink to="/">Invoices</RouterLink>
       <RouterLink to="/payments">Payments &amp; demo</RouterLink>
+      <RouterLink to="/about">How it works</RouterLink>
     </nav>
     <span class="spacer" />
     <span v-if="meta" class="muted small">{{ meta.buyerName }} · pays in {{ meta.fundingCurrency }}</span>

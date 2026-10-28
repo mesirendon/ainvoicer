@@ -9,5 +9,6 @@ export const router = createRouter({
     { path: '/', component: InvoicesView },
     { path: '/invoices/:id', component: InvoiceDetailView },
     { path: '/payments', component: PaymentsView },
+    { path: '/about', component: () => import('./views/AboutView.vue') },
   ],
 })

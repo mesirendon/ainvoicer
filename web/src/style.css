@@ -15,6 +15,14 @@
   --blue: #1d4ed8;
   --grey: #6b7280;
   --dark: #374151;
+  --edge: #cbd2d9;
+  --zone-bg: #f8fafc;
+  --node-rules: #f2f7ff;
+  --node-data: #f6f3ff;
+  --node-external: #fff8ec;
+  --node-job: #f1faf4;
+  --code-bg: #0f172a;
+  --code-text: #e2e8f0;
   --radius: 8px;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
