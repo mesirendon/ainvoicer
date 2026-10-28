@@ -1,5 +1,7 @@
 # AP Agent: cross-border supplier invoices
 
+![AP Agent promo](ainvoicer-promo.gif)
+
 A demo accounts-payable agent for a LatAm business that pays international suppliers. A finance user uploads a supplier invoice (PDF, English or Spanish). The agent:
 
 1. **Reads it with Claude.** It extracts structured data, with every amount copied as printed.
