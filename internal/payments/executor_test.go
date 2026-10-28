@@ -17,7 +17,7 @@ var due = Payment{
 	InvoiceID:          "inv-1",
 	InvoiceNumber:      "ACM-1",
 	PreviousStatus:     StatusScheduled,
-	DestinationAccount: "4242000011112222",
+	DestinationAccount: "4242000011113456",
 	AmountMinor:        558250,
 	Currency:           "USD",
 }
@@ -30,7 +30,7 @@ func newExecutor(t *testing.T) (*Executor, *MockStore, *MockGateway) {
 }
 
 func payRequest() PayRequest {
-	return PayRequest{IdempotencyKey: "pay-1", DestinationAccount: "4242000011112222", AmountMinor: 558250, Currency: "USD", Description: "Invoice ACM-1"}
+	return PayRequest{IdempotencyKey: "pay-1", DestinationAccount: "4242000011113456", AmountMinor: 558250, Currency: "USD", Description: "Invoice ACM-1"}
 }
 
 func TestExecutor(t *testing.T) {
