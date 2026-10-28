@@ -7,7 +7,6 @@ package invoices
 import (
 	"ap-agent/internal/extraction"
 	"ap-agent/internal/geocode"
-	"ap-agent/internal/matching"
 	"context"
 
 	mock "github.com/stretchr/testify/mock"
@@ -50,25 +49,25 @@ func (_m *MockStore) EXPECT() *MockStore_Expecter {
 }
 
 // ApplyVerdict provides a mock function for the type MockStore
-func (_mock *MockStore) ApplyVerdict(ctx context.Context, id string, inv extraction.ExtractedInvoice, shipFrom *geocode.Point, decide func(matching.Input) matching.Result) (matching.Verdict, error) {
-	ret := _mock.Called(ctx, id, inv, shipFrom, decide)
+func (_mock *MockStore) ApplyVerdict(ctx context.Context, id string, inv extraction.ExtractedInvoice, shipFrom *geocode.Point, rules Rules) (string, error) {
+	ret := _mock.Called(ctx, id, inv, shipFrom, rules)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ApplyVerdict")
 	}
 
-	var r0 matching.Verdict
+	var r0 string
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, extraction.ExtractedInvoice, *geocode.Point, func(matching.Input) matching.Result) (matching.Verdict, error)); ok {
-		return returnFunc(ctx, id, inv, shipFrom, decide)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, extraction.ExtractedInvoice, *geocode.Point, Rules) (string, error)); ok {
+		return returnFunc(ctx, id, inv, shipFrom, rules)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, extraction.ExtractedInvoice, *geocode.Point, func(matching.Input) matching.Result) matching.Verdict); ok {
-		r0 = returnFunc(ctx, id, inv, shipFrom, decide)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, extraction.ExtractedInvoice, *geocode.Point, Rules) string); ok {
+		r0 = returnFunc(ctx, id, inv, shipFrom, rules)
 	} else {
-		r0 = ret.Get(0).(matching.Verdict)
+		r0 = ret.Get(0).(string)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, extraction.ExtractedInvoice, *geocode.Point, func(matching.Input) matching.Result) error); ok {
-		r1 = returnFunc(ctx, id, inv, shipFrom, decide)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, extraction.ExtractedInvoice, *geocode.Point, Rules) error); ok {
+		r1 = returnFunc(ctx, id, inv, shipFrom, rules)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -85,12 +84,12 @@ type MockStore_ApplyVerdict_Call struct {
 //   - id string
 //   - inv extraction.ExtractedInvoice
 //   - shipFrom *geocode.Point
-//   - decide func(matching.Input) matching.Result
-func (_e *MockStore_Expecter) ApplyVerdict(ctx any, id any, inv any, shipFrom any, decide any) *MockStore_ApplyVerdict_Call {
-	return &MockStore_ApplyVerdict_Call{Call: _e.mock.On("ApplyVerdict", ctx, id, inv, shipFrom, decide)}
+//   - rules Rules
+func (_e *MockStore_Expecter) ApplyVerdict(ctx any, id any, inv any, shipFrom any, rules any) *MockStore_ApplyVerdict_Call {
+	return &MockStore_ApplyVerdict_Call{Call: _e.mock.On("ApplyVerdict", ctx, id, inv, shipFrom, rules)}
 }
 
-func (_c *MockStore_ApplyVerdict_Call) Run(run func(ctx context.Context, id string, inv extraction.ExtractedInvoice, shipFrom *geocode.Point, decide func(matching.Input) matching.Result)) *MockStore_ApplyVerdict_Call {
+func (_c *MockStore_ApplyVerdict_Call) Run(run func(ctx context.Context, id string, inv extraction.ExtractedInvoice, shipFrom *geocode.Point, rules Rules)) *MockStore_ApplyVerdict_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -108,9 +107,9 @@ func (_c *MockStore_ApplyVerdict_Call) Run(run func(ctx context.Context, id stri
 		if args[3] != nil {
 			arg3 = args[3].(*geocode.Point)
 		}
-		var arg4 func(matching.Input) matching.Result
+		var arg4 Rules
 		if args[4] != nil {
-			arg4 = args[4].(func(matching.Input) matching.Result)
+			arg4 = args[4].(Rules)
 		}
 		run(
 			arg0,
@@ -123,12 +122,81 @@ func (_c *MockStore_ApplyVerdict_Call) Run(run func(ctx context.Context, id stri
 	return _c
 }
 
-func (_c *MockStore_ApplyVerdict_Call) Return(verdict matching.Verdict, err error) *MockStore_ApplyVerdict_Call {
-	_c.Call.Return(verdict, err)
+func (_c *MockStore_ApplyVerdict_Call) Return(s string, err error) *MockStore_ApplyVerdict_Call {
+	_c.Call.Return(s, err)
 	return _c
 }
 
-func (_c *MockStore_ApplyVerdict_Call) RunAndReturn(run func(ctx context.Context, id string, inv extraction.ExtractedInvoice, shipFrom *geocode.Point, decide func(matching.Input) matching.Result) (matching.Verdict, error)) *MockStore_ApplyVerdict_Call {
+func (_c *MockStore_ApplyVerdict_Call) RunAndReturn(run func(ctx context.Context, id string, inv extraction.ExtractedInvoice, shipFrom *geocode.Point, rules Rules) (string, error)) *MockStore_ApplyVerdict_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Approve provides a mock function for the type MockStore
+func (_mock *MockStore) Approve(ctx context.Context, id string, actor string, rules Rules) error {
+	ret := _mock.Called(ctx, id, actor, rules)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Approve")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, Rules) error); ok {
+		r0 = returnFunc(ctx, id, actor, rules)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_Approve_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Approve'
+type MockStore_Approve_Call struct {
+	*mock.Call
+}
+
+// Approve is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+//   - actor string
+//   - rules Rules
+func (_e *MockStore_Expecter) Approve(ctx any, id any, actor any, rules any) *MockStore_Approve_Call {
+	return &MockStore_Approve_Call{Call: _e.mock.On("Approve", ctx, id, actor, rules)}
+}
+
+func (_c *MockStore_Approve_Call) Run(run func(ctx context.Context, id string, actor string, rules Rules)) *MockStore_Approve_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 Rules
+		if args[3] != nil {
+			arg3 = args[3].(Rules)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_Approve_Call) Return(err error) *MockStore_Approve_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_Approve_Call) RunAndReturn(run func(ctx context.Context, id string, actor string, rules Rules) error) *MockStore_Approve_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -394,6 +462,150 @@ func (_c *MockStore_MarkExtractionFailed_Call) Return(err error) *MockStore_Mark
 }
 
 func (_c *MockStore_MarkExtractionFailed_Call) RunAndReturn(run func(ctx context.Context, id string, reason string) error) *MockStore_MarkExtractionFailed_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Override provides a mock function for the type MockStore
+func (_mock *MockStore) Override(ctx context.Context, id string, actor string, reason string, rules Rules) error {
+	ret := _mock.Called(ctx, id, actor, reason, rules)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Override")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string, Rules) error); ok {
+		r0 = returnFunc(ctx, id, actor, reason, rules)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_Override_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Override'
+type MockStore_Override_Call struct {
+	*mock.Call
+}
+
+// Override is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+//   - actor string
+//   - reason string
+//   - rules Rules
+func (_e *MockStore_Expecter) Override(ctx any, id any, actor any, reason any, rules any) *MockStore_Override_Call {
+	return &MockStore_Override_Call{Call: _e.mock.On("Override", ctx, id, actor, reason, rules)}
+}
+
+func (_c *MockStore_Override_Call) Run(run func(ctx context.Context, id string, actor string, reason string, rules Rules)) *MockStore_Override_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 Rules
+		if args[4] != nil {
+			arg4 = args[4].(Rules)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_Override_Call) Return(err error) *MockStore_Override_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_Override_Call) RunAndReturn(run func(ctx context.Context, id string, actor string, reason string, rules Rules) error) *MockStore_Override_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Reject provides a mock function for the type MockStore
+func (_mock *MockStore) Reject(ctx context.Context, id string, actor string, reason string) error {
+	ret := _mock.Called(ctx, id, actor, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Reject")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+		r0 = returnFunc(ctx, id, actor, reason)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_Reject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Reject'
+type MockStore_Reject_Call struct {
+	*mock.Call
+}
+
+// Reject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+//   - actor string
+//   - reason string
+func (_e *MockStore_Expecter) Reject(ctx any, id any, actor any, reason any) *MockStore_Reject_Call {
+	return &MockStore_Reject_Call{Call: _e.mock.On("Reject", ctx, id, actor, reason)}
+}
+
+func (_c *MockStore_Reject_Call) Run(run func(ctx context.Context, id string, actor string, reason string)) *MockStore_Reject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_Reject_Call) Return(err error) *MockStore_Reject_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_Reject_Call) RunAndReturn(run func(ctx context.Context, id string, actor string, reason string) error) *MockStore_Reject_Call {
 	_c.Call.Return(run)
 	return _c
 }

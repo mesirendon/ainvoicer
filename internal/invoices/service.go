@@ -10,7 +10,6 @@ import (
 
 	"ap-agent/internal/extraction"
 	"ap-agent/internal/geocode"
-	"ap-agent/internal/matching"
 )
 
 type Extractor interface {
@@ -24,7 +23,10 @@ type Geocoder interface {
 type Store interface {
 	SaveReceivedInvoice(ctx context.Context, f NewFile) (Received, error)
 	MarkExtractionFailed(ctx context.Context, id, reason string) error
-	ApplyVerdict(ctx context.Context, id string, inv extraction.ExtractedInvoice, shipFrom *geocode.Point, decide func(matching.Input) matching.Result) (matching.Verdict, error)
+	ApplyVerdict(ctx context.Context, id string, inv extraction.ExtractedInvoice, shipFrom *geocode.Point, rules Rules) (string, error)
+	Approve(ctx context.Context, id, actor string, rules Rules) error
+	Override(ctx context.Context, id, actor, reason string, rules Rules) error
+	Reject(ctx context.Context, id, actor, reason string) error
 	GetInvoice(ctx context.Context, id string) (Detail, error)
 	ListInvoices(ctx context.Context) ([]Summary, error)
 	InvoiceFile(ctx context.Context, id string) (string, []byte, error)
@@ -34,7 +36,7 @@ type Service struct {
 	Store          Store
 	Extractor      Extractor
 	Geocoder       Geocoder
-	Tolerances     matching.Tolerances
+	Rules          Rules
 	ExtractTimeout time.Duration
 	GeocodeTimeout time.Duration
 	SamplesDir     string
@@ -70,14 +72,10 @@ func (s *Service) process(ctx context.Context, id, fileName string, pdf []byte) 
 	}
 
 	shipFrom := s.geocode(ctx, id, inv.ShipFrom)
-	if _, err := s.Store.ApplyVerdict(ctx, id, inv, shipFrom, s.decide); err != nil {
+	if _, err := s.Store.ApplyVerdict(ctx, id, inv, shipFrom, s.Rules); err != nil {
 		return fmt.Errorf("apply verdict: %w", err)
 	}
 	return nil
-}
-
-func (s *Service) decide(in matching.Input) matching.Result {
-	return matching.Match(in, s.Tolerances)
 }
 
 func (s *Service) geocode(ctx context.Context, id string, a extraction.Address) *geocode.Point {

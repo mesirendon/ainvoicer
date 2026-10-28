@@ -76,15 +76,15 @@ func (r *Repo) MarkExtractionFailed(ctx context.Context, id, reason string) erro
 }
 
 func (r *Repo) ApplyVerdict(ctx context.Context, id string, inv extraction.ExtractedInvoice, shipFrom *geocode.Point,
-	decide func(matching.Input) matching.Result,
-) (matching.Verdict, error) {
-	var verdict matching.Verdict
+	rules invoices.Rules,
+) (string, error) {
+	var status string
 	err := db.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
-		var status string
-		if err := tx.QueryRow(ctx, `SELECT status FROM invoices WHERE id = $1 FOR UPDATE`, id).Scan(&status); err != nil {
+		var current string
+		if err := tx.QueryRow(ctx, `SELECT status FROM invoices WHERE id = $1 FOR UPDATE`, id).Scan(&current); err != nil {
 			return fmt.Errorf("lock invoice: %w", err)
 		}
-		if status != invoices.StatusReceived {
+		if current != invoices.StatusReceived {
 			return errNotReceived
 		}
 
@@ -122,20 +122,42 @@ func (r *Repo) ApplyVerdict(ctx context.Context, id string, inv extraction.Extra
 			}
 		}
 
-		result := decide(in)
-		verdict = result.Verdict
+		decision := rules.Decide(in)
+		result := decision.Result
+		status = string(result.Verdict)
 		if err := insertLines(ctx, tx, id, inv.Lines, result.Lines); err != nil {
 			return err
 		}
 		if err := insertFindings(ctx, tx, id, result.Findings); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `UPDATE invoices SET status = $2, updated_at = now() WHERE id = $1`, id, string(result.Verdict)); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE invoices SET status = $2, updated_at = now() WHERE id = $1`, id, status); err != nil {
 			return fmt.Errorf("set verdict: %w", err)
 		}
-		return insertAudit(ctx, tx, id, "agent", "matched", map[string]any{"verdict": result.Verdict, "findings": len(result.Findings)})
+		if err := insertAudit(ctx, tx, id, "agent", "matched", map[string]any{"verdict": result.Verdict, "findings": len(result.Findings)}); err != nil {
+			return err
+		}
+		if !decision.AutoApprove {
+			return nil
+		}
+
+		plan, err := planPayment(ctx, tx, id, rules)
+		if errors.Is(err, invoices.ErrCannotSchedule) {
+			return insertAudit(ctx, tx, id, "agent", "auto_approval_skipped", map[string]string{"error": err.Error()})
+		}
+		if err != nil {
+			return err
+		}
+		if err := transition(ctx, tx, id, []string{string(matching.VerdictMatched)}, invoices.StatusApproved); err != nil {
+			return err
+		}
+		if err := insertAudit(ctx, tx, id, "agent", "approved", map[string]string{"reason": "clean 3-way match, auto-approved"}); err != nil {
+			return err
+		}
+		status = invoices.StatusPaymentScheduled
+		return schedulePayment(ctx, tx, id, plan)
 	})
-	return verdict, err
+	return status, err
 }
 
 func lockSupplier(ctx context.Context, q db.Querier, taxID, name string) (*matching.Supplier, error) {

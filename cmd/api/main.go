@@ -68,10 +68,14 @@ func run(cfg config.Config) error {
 
 	store := repo.New(pool, cfg.LeaseSeconds, cfg.LeaseSeconds+cfg.ExtractTimeoutMS/1000)
 	service := &invoices.Service{
-		Store:          store,
-		Extractor:      newExtractor(cfg),
-		Geocoder:       geocode.TableGeocoder{},
-		Tolerances:     matching.Tolerances{PriceBps: cfg.PriceToleranceBps, OriginKM: cfg.OriginToleranceKM},
+		Store:     store,
+		Extractor: newExtractor(cfg),
+		Geocoder:  geocode.TableGeocoder{},
+		Rules: invoices.Rules{
+			Tolerances:       matching.Tolerances{PriceBps: cfg.PriceToleranceBps, OriginKM: cfg.OriginToleranceKM},
+			AutoApproveClean: cfg.AutoApproveClean,
+			FundingCurrency:  cfg.BuyerBaseCurrency,
+		},
 		ExtractTimeout: time.Duration(cfg.ExtractTimeoutMS) * time.Millisecond,
 		GeocodeTimeout: time.Duration(cfg.GeocoderTimeoutMS) * time.Millisecond,
 		SamplesDir:     cfg.SamplesDir,

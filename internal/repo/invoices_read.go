@@ -64,6 +64,9 @@ func loadInvoiceDetail(ctx context.Context, q db.Querier, id string) (invoices.D
 		}
 		d.PurchaseOrder = &po
 	}
+	if d.Payment, err = loadPayment(ctx, q, id); err != nil {
+		return invoices.Detail{}, err
+	}
 	if d.Audit, err = loadAudit(ctx, q, id); err != nil {
 		return invoices.Detail{}, err
 	}
@@ -107,6 +110,27 @@ func (r *Repo) InvoiceFile(ctx context.Context, id string) (string, []byte, erro
 		return "", nil, fmt.Errorf("load invoice file: %w", err)
 	}
 	return name, file, nil
+}
+
+func loadPayment(ctx context.Context, q db.Querier, invoiceID string) (*invoices.Payment, error) {
+	var p invoices.Payment
+	var scheduledFor time.Time
+	err := q.QueryRow(ctx, `
+		SELECT id, status, amount_minor, discount_minor, currency, scheduled_for,
+		       funding_currency, fx_rate_e8, fx_spread_bps, funding_amount_minor,
+		       processor_payment_id, error, updated_at
+		FROM payments WHERE invoice_id = $1`, invoiceID).Scan(
+		&p.ID, &p.Status, &p.AmountMinor, &p.DiscountMinor, &p.Currency, &scheduledFor,
+		&p.FundingCurrency, &p.FxRateE8, &p.FxSpreadBps, &p.FundingAmountMinor,
+		&p.ProcessorPaymentID, &p.Error, &p.UpdatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load payment: %w", err)
+	}
+	p.ScheduledFor = scheduledFor.Format(time.DateOnly)
+	return &p, nil
 }
 
 func loadInvoiceLines(ctx context.Context, q db.Querier, id string) ([]invoices.Line, error) {

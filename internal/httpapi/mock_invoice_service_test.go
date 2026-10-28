@@ -47,6 +47,72 @@ func (_m *MockInvoiceService) EXPECT() *MockInvoiceService_Expecter {
 	return &MockInvoiceService_Expecter{mock: &_m.Mock}
 }
 
+// Approve provides a mock function for the type MockInvoiceService
+func (_mock *MockInvoiceService) Approve(ctx context.Context, id string) (invoices.Detail, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Approve")
+	}
+
+	var r0 invoices.Detail
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (invoices.Detail, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) invoices.Detail); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(invoices.Detail)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockInvoiceService_Approve_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Approve'
+type MockInvoiceService_Approve_Call struct {
+	*mock.Call
+}
+
+// Approve is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+func (_e *MockInvoiceService_Expecter) Approve(ctx any, id any) *MockInvoiceService_Approve_Call {
+	return &MockInvoiceService_Approve_Call{Call: _e.mock.On("Approve", ctx, id)}
+}
+
+func (_c *MockInvoiceService_Approve_Call) Run(run func(ctx context.Context, id string)) *MockInvoiceService_Approve_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockInvoiceService_Approve_Call) Return(detail invoices.Detail, err error) *MockInvoiceService_Approve_Call {
+	_c.Call.Return(detail, err)
+	return _c
+}
+
+func (_c *MockInvoiceService_Approve_Call) RunAndReturn(run func(ctx context.Context, id string) (invoices.Detail, error)) *MockInvoiceService_Approve_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // File provides a mock function for the type MockInvoiceService
 func (_mock *MockInvoiceService) File(ctx context.Context, id string) (string, []byte, error) {
 	ret := _mock.Called(ctx, id)
@@ -249,6 +315,78 @@ func (_c *MockInvoiceService_List_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// Override provides a mock function for the type MockInvoiceService
+func (_mock *MockInvoiceService) Override(ctx context.Context, id string, reason string) (invoices.Detail, error) {
+	ret := _mock.Called(ctx, id, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Override")
+	}
+
+	var r0 invoices.Detail
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (invoices.Detail, error)); ok {
+		return returnFunc(ctx, id, reason)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) invoices.Detail); ok {
+		r0 = returnFunc(ctx, id, reason)
+	} else {
+		r0 = ret.Get(0).(invoices.Detail)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, id, reason)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockInvoiceService_Override_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Override'
+type MockInvoiceService_Override_Call struct {
+	*mock.Call
+}
+
+// Override is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+//   - reason string
+func (_e *MockInvoiceService_Expecter) Override(ctx any, id any, reason any) *MockInvoiceService_Override_Call {
+	return &MockInvoiceService_Override_Call{Call: _e.mock.On("Override", ctx, id, reason)}
+}
+
+func (_c *MockInvoiceService_Override_Call) Run(run func(ctx context.Context, id string, reason string)) *MockInvoiceService_Override_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockInvoiceService_Override_Call) Return(detail invoices.Detail, err error) *MockInvoiceService_Override_Call {
+	_c.Call.Return(detail, err)
+	return _c
+}
+
+func (_c *MockInvoiceService_Override_Call) RunAndReturn(run func(ctx context.Context, id string, reason string) (invoices.Detail, error)) *MockInvoiceService_Override_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Process provides a mock function for the type MockInvoiceService
 func (_mock *MockInvoiceService) Process(ctx context.Context, fileName string, pdf []byte) (invoices.Detail, bool, error) {
 	ret := _mock.Called(ctx, fileName, pdf)
@@ -323,6 +461,78 @@ func (_c *MockInvoiceService_Process_Call) Return(detail invoices.Detail, b bool
 }
 
 func (_c *MockInvoiceService_Process_Call) RunAndReturn(run func(ctx context.Context, fileName string, pdf []byte) (invoices.Detail, bool, error)) *MockInvoiceService_Process_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Reject provides a mock function for the type MockInvoiceService
+func (_mock *MockInvoiceService) Reject(ctx context.Context, id string, reason string) (invoices.Detail, error) {
+	ret := _mock.Called(ctx, id, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Reject")
+	}
+
+	var r0 invoices.Detail
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) (invoices.Detail, error)); ok {
+		return returnFunc(ctx, id, reason)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string) invoices.Detail); ok {
+		r0 = returnFunc(ctx, id, reason)
+	} else {
+		r0 = ret.Get(0).(invoices.Detail)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = returnFunc(ctx, id, reason)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockInvoiceService_Reject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Reject'
+type MockInvoiceService_Reject_Call struct {
+	*mock.Call
+}
+
+// Reject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+//   - reason string
+func (_e *MockInvoiceService_Expecter) Reject(ctx any, id any, reason any) *MockInvoiceService_Reject_Call {
+	return &MockInvoiceService_Reject_Call{Call: _e.mock.On("Reject", ctx, id, reason)}
+}
+
+func (_c *MockInvoiceService_Reject_Call) Run(run func(ctx context.Context, id string, reason string)) *MockInvoiceService_Reject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockInvoiceService_Reject_Call) Return(detail invoices.Detail, err error) *MockInvoiceService_Reject_Call {
+	_c.Call.Return(detail, err)
+	return _c
+}
+
+func (_c *MockInvoiceService_Reject_Call) RunAndReturn(run func(ctx context.Context, id string, reason string) (invoices.Detail, error)) *MockInvoiceService_Reject_Call {
 	_c.Call.Return(run)
 	return _c
 }

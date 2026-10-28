@@ -14,8 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"ap-agent/internal/extraction"
+	"ap-agent/internal/fx"
 	"ap-agent/internal/geocode"
 	"ap-agent/internal/matching"
+	"ap-agent/internal/payments"
 )
 
 const invoiceID = "11111111-2222-4333-8444-555555555555"
@@ -29,10 +31,14 @@ type mocks struct {
 func newService(t *testing.T) (*Service, mocks) {
 	m := mocks{store: NewMockStore(t), extractor: NewMockExtractor(t), geocoder: NewMockGeocoder(t)}
 	return &Service{
-		Store:          m.store,
-		Extractor:      m.extractor,
-		Geocoder:       m.geocoder,
-		Tolerances:     matching.Tolerances{PriceBps: 200, OriginKM: 100},
+		Store:     m.store,
+		Extractor: m.extractor,
+		Geocoder:  m.geocoder,
+		Rules: Rules{
+			Tolerances:       matching.Tolerances{PriceBps: 200, OriginKM: 100},
+			AutoApproveClean: true,
+			FundingCurrency:  "COP",
+		},
 		ExtractTimeout: time.Second,
 		GeocodeTimeout: time.Second,
 	}, m
@@ -50,6 +56,14 @@ func extracted() extraction.ExtractedInvoice {
 	}
 }
 
+func day(s string) time.Time {
+	t, err := time.Parse(time.DateOnly, s)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
 func matchingInput(unitPrice int64) matching.Input {
 	return matching.Input{
 		Invoice: matching.Invoice{
@@ -64,14 +78,7 @@ func matchingInput(unitPrice int64) matching.Input {
 	}
 }
 
-func expectVerdictFrom(m mocks, in matching.Input, shipFrom *geocode.Point) {
-	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, extracted(), shipFrom, mock.Anything).
-		RunAndReturn(func(_ context.Context, _ string, _ extraction.ExtractedInvoice, _ *geocode.Point, decide func(matching.Input) matching.Result) (matching.Verdict, error) {
-			return decide(in).Verdict, nil
-		}).Once()
-}
-
-func TestProcess_CleanInvoiceMatched(t *testing.T) {
+func TestProcess_CleanInvoiceAutoApprovedAndScheduled(t *testing.T) {
 	s, m := newService(t)
 	houston := geocode.Point{Lat: 29.76, Lng: -95.37}
 	m.store.EXPECT().SaveReceivedInvoice(mock.Anything, mock.MatchedBy(func(f NewFile) bool {
@@ -79,14 +86,40 @@ func TestProcess_CleanInvoiceMatched(t *testing.T) {
 	})).Return(Received{ID: invoiceID, Created: true, Claimed: true}, nil).Once()
 	m.extractor.EXPECT().Extract(mock.Anything, "inv.pdf", []byte("%PDF-1")).Return(extracted(), nil).Once()
 	m.geocoder.EXPECT().Geocode(mock.Anything, geocode.Address{City: "Houston", PostalCode: "77002", Country: "US"}).Return(houston, nil).Once()
-	expectVerdictFrom(m, matchingInput(1000), &houston)
-	m.store.EXPECT().GetInvoice(mock.Anything, invoiceID).Return(Detail{ID: invoiceID, Status: "MATCHED"}, nil).Once()
+	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, extracted(), &houston, s.Rules).
+		RunAndReturn(func(_ context.Context, _ string, _ extraction.ExtractedInvoice, _ *geocode.Point, rules Rules) (string, error) {
+			decision := rules.Decide(matchingInput(1000))
+			require.True(t, decision.AutoApprove)
+			plan, err := rules.PlanPayment(PaymentInput{
+				InvoiceAmountMinor: 100000, Currency: "USD",
+				IssueDate: day("2026-10-15"), DueDate: day("2026-11-14"), Today: day("2026-10-27"),
+				Terms: payments.Terms{NetDays: 30},
+				Rate:  &fx.Rate{Base: "USD", Quote: "COP", RateE8: 400000000000, SpreadBps: 100},
+			})
+			require.NoError(t, err)
+			assert.Equal(t, day("2026-11-14"), plan.Schedule.PayOn)
+			assert.Equal(t, int64(404000000), plan.Conversion.FundingAmountMinor)
+			return StatusPaymentScheduled, nil
+		}).Once()
+	m.store.EXPECT().GetInvoice(mock.Anything, invoiceID).Return(Detail{ID: invoiceID, Status: StatusPaymentScheduled}, nil).Once()
 
 	d, created, err := s.Process(context.Background(), "inv.pdf", []byte("%PDF-1"))
 
 	require.NoError(t, err)
 	assert.True(t, created)
-	assert.Equal(t, "MATCHED", d.Status)
+	assert.Equal(t, StatusPaymentScheduled, d.Status)
+}
+
+func TestDecide_WarningsAndAutoApproveOffWaitForHuman(t *testing.T) {
+	rules := Rules{Tolerances: matching.Tolerances{PriceBps: 200, OriginKM: 100}, AutoApproveClean: true, FundingCurrency: "COP"}
+	warned := rules.Decide(matchingInput(1010))
+	assert.Equal(t, matching.VerdictMatchedWithWarnings, warned.Result.Verdict)
+	assert.False(t, warned.AutoApprove)
+
+	rules.AutoApproveClean = false
+	clean := rules.Decide(matchingInput(1000))
+	assert.Equal(t, matching.VerdictMatched, clean.Result.Verdict)
+	assert.False(t, clean.AutoApprove)
 }
 
 func TestProcess_BlockedOnPriceVariance(t *testing.T) {
@@ -94,21 +127,21 @@ func TestProcess_BlockedOnPriceVariance(t *testing.T) {
 	m.store.EXPECT().SaveReceivedInvoice(mock.Anything, mock.Anything).Return(Received{ID: invoiceID, Created: true, Claimed: true}, nil).Once()
 	m.extractor.EXPECT().Extract(mock.Anything, "inv.pdf", mock.Anything).Return(extracted(), nil).Once()
 	m.geocoder.EXPECT().Geocode(mock.Anything, mock.Anything).Return(geocode.Point{}, nil).Once()
-	var verdict matching.Verdict
+	var decision Decision
 	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, mock.Anything, mock.Anything, mock.Anything).
-		RunAndReturn(func(_ context.Context, _ string, _ extraction.ExtractedInvoice, _ *geocode.Point, decide func(matching.Input) matching.Result) (matching.Verdict, error) {
-			result := decide(matchingInput(1080))
-			verdict = result.Verdict
-			require.Len(t, result.Findings, 1)
-			assert.Equal(t, "PRICE_VARIANCE", result.Findings[0].Code)
-			return verdict, nil
+		RunAndReturn(func(_ context.Context, _ string, _ extraction.ExtractedInvoice, _ *geocode.Point, rules Rules) (string, error) {
+			decision = rules.Decide(matchingInput(1080))
+			require.Len(t, decision.Result.Findings, 1)
+			assert.Equal(t, "PRICE_VARIANCE", decision.Result.Findings[0].Code)
+			return string(decision.Result.Verdict), nil
 		}).Once()
 	m.store.EXPECT().GetInvoice(mock.Anything, invoiceID).Return(Detail{ID: invoiceID, Status: "BLOCKED"}, nil).Once()
 
 	d, _, err := s.Process(context.Background(), "inv.pdf", []byte("%PDF-1"))
 
 	require.NoError(t, err)
-	assert.Equal(t, matching.VerdictBlocked, verdict)
+	assert.Equal(t, matching.VerdictBlocked, decision.Result.Verdict)
+	assert.False(t, decision.AutoApprove)
 	assert.Equal(t, "BLOCKED", d.Status)
 }
 
@@ -129,7 +162,7 @@ func TestProcess_ReclaimedFileIsProcessedAgain(t *testing.T) {
 	m.store.EXPECT().SaveReceivedInvoice(mock.Anything, mock.Anything).Return(Received{ID: invoiceID, Claimed: true}, nil).Once()
 	m.extractor.EXPECT().Extract(mock.Anything, "inv.pdf", mock.Anything).Return(extracted(), nil).Once()
 	m.geocoder.EXPECT().Geocode(mock.Anything, mock.Anything).Return(geocode.Point{}, nil).Once()
-	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, mock.Anything, mock.Anything, mock.Anything).Return(matching.VerdictMatched, nil).Once()
+	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, mock.Anything, mock.Anything, mock.Anything).Return("MATCHED", nil).Once()
 	m.store.EXPECT().GetInvoice(mock.Anything, invoiceID).Return(Detail{ID: invoiceID, Status: "MATCHED"}, nil).Once()
 
 	_, created, err := s.Process(context.Background(), "inv.pdf", []byte("%PDF-1"))
@@ -179,12 +212,12 @@ func TestProcess_GeocodingFailureStillMatches(t *testing.T) {
 	in.Nearest = nil
 	var codes []string
 	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, extracted(), (*geocode.Point)(nil), mock.Anything).
-		RunAndReturn(func(_ context.Context, _ string, _ extraction.ExtractedInvoice, _ *geocode.Point, decide func(matching.Input) matching.Result) (matching.Verdict, error) {
-			result := decide(in)
+		RunAndReturn(func(_ context.Context, _ string, _ extraction.ExtractedInvoice, _ *geocode.Point, rules Rules) (string, error) {
+			result := rules.Decide(in).Result
 			for _, f := range result.Findings {
 				codes = append(codes, f.Code)
 			}
-			return result.Verdict, nil
+			return string(result.Verdict), nil
 		}).Once()
 	m.store.EXPECT().GetInvoice(mock.Anything, invoiceID).Return(Detail{ID: invoiceID, Status: "MATCHED_WITH_WARNINGS"}, nil).Once()
 
@@ -201,7 +234,7 @@ func TestProcess_NoShipFromSkipsGeocoder(t *testing.T) {
 	inv.ShipFrom = extraction.Address{}
 	m.store.EXPECT().SaveReceivedInvoice(mock.Anything, mock.Anything).Return(Received{ID: invoiceID, Created: true, Claimed: true}, nil).Once()
 	m.extractor.EXPECT().Extract(mock.Anything, "inv.pdf", mock.Anything).Return(inv, nil).Once()
-	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, inv, (*geocode.Point)(nil), mock.Anything).Return(matching.VerdictMatched, nil).Once()
+	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, inv, (*geocode.Point)(nil), mock.Anything).Return("MATCHED", nil).Once()
 	m.store.EXPECT().GetInvoice(mock.Anything, invoiceID).Return(Detail{ID: invoiceID}, nil).Once()
 
 	_, _, err := s.Process(context.Background(), "inv.pdf", []byte("%PDF-1"))
@@ -223,7 +256,7 @@ func TestProcess_ClientDisconnectDoesNotAbortProcessing(t *testing.T) {
 			return extracted(), nil
 		}).Once()
 	m.geocoder.EXPECT().Geocode(mock.Anything, mock.Anything).Return(geocode.Point{}, nil).Once()
-	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, mock.Anything, mock.Anything, mock.Anything).Return(matching.VerdictMatched, nil).Once()
+	m.store.EXPECT().ApplyVerdict(mock.Anything, invoiceID, mock.Anything, mock.Anything, mock.Anything).Return("MATCHED", nil).Once()
 	m.store.EXPECT().GetInvoice(mock.Anything, invoiceID).Return(Detail{ID: invoiceID}, nil).Once()
 
 	_, _, err := s.Process(ctx, "inv.pdf", []byte("%PDF-1"))

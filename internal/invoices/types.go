@@ -9,6 +9,9 @@ import (
 const (
 	StatusReceived         = "RECEIVED"
 	StatusExtractionFailed = "EXTRACTION_FAILED"
+	StatusApproved         = "APPROVED"
+	StatusRejected         = "REJECTED"
+	StatusPaymentScheduled = "PAYMENT_SCHEDULED"
 )
 
 var (
@@ -76,7 +79,24 @@ type Detail struct {
 	Lines           []Line          `json:"lines"`
 	Findings        []Finding       `json:"findings"`
 	PurchaseOrder   *PurchaseOrder  `json:"purchaseOrder"`
+	Payment         *Payment        `json:"payment"`
 	Audit           []AuditEntry    `json:"audit"`
+}
+
+type Payment struct {
+	ID                 string    `json:"id"`
+	Status             string    `json:"status"`
+	AmountMinor        int64     `json:"amountMinor"`
+	DiscountMinor      int64     `json:"discountMinor"`
+	Currency           string    `json:"currency"`
+	ScheduledFor       string    `json:"scheduledFor"`
+	FundingCurrency    string    `json:"fundingCurrency"`
+	FxRateE8           int64     `json:"fxRateE8"`
+	FxSpreadBps        int       `json:"fxSpreadBps"`
+	FundingAmountMinor int64     `json:"fundingAmountMinor"`
+	ProcessorPaymentID string    `json:"processorPaymentId"`
+	Error              string    `json:"error"`
+	UpdatedAt          time.Time `json:"updatedAt"`
 }
 
 type Line struct {

@@ -34,6 +34,10 @@ func handleError(c *gin.Context, err error) {
 		WriteError(c, http.StatusNotFound, "NOT_FOUND", "not found", nil)
 	case errors.Is(err, invoices.ErrConflict):
 		WriteError(c, http.StatusConflict, "INVALID_STATE", err.Error(), nil)
+	case errors.Is(err, invoices.ErrReasonRequired):
+		WriteError(c, http.StatusUnprocessableEntity, "REASON_REQUIRED", err.Error(), nil)
+	case errors.Is(err, invoices.ErrCannotSchedule):
+		WriteError(c, http.StatusUnprocessableEntity, "CANNOT_SCHEDULE", err.Error(), nil)
 	case errors.As(err, &extractionErr):
 		details := gin.H{"invoiceId": extractionErr.InvoiceID}
 		switch {

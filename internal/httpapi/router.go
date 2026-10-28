@@ -19,6 +19,9 @@ type InvoiceService interface {
 	List(ctx context.Context) ([]invoices.Summary, error)
 	Get(ctx context.Context, id string) (invoices.Detail, error)
 	File(ctx context.Context, id string) (string, []byte, error)
+	Approve(ctx context.Context, id string) (invoices.Detail, error)
+	Override(ctx context.Context, id, reason string) (invoices.Detail, error)
+	Reject(ctx context.Context, id, reason string) (invoices.Detail, error)
 }
 
 type SampleService interface {
@@ -60,6 +63,9 @@ func NewRouter(d Deps) *gin.Engine {
 	api.GET("/invoices", h.listInvoices)
 	api.GET("/invoices/:id", h.getInvoice)
 	api.GET("/invoices/:id/file", h.invoiceFile)
+	api.POST("/invoices/:id/approve", h.approve)
+	api.POST("/invoices/:id/override", h.override)
+	api.POST("/invoices/:id/reject", h.reject)
 	api.GET("/samples", h.listSamples)
 	api.POST("/samples/:name/process", h.processSample)
 	api.GET("/purchase-orders", h.listPurchaseOrders)
