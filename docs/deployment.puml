@@ -1,0 +1,25 @@
+@startuml deployment
+title Deployment: docker compose (make up)
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+
+node "Developer machine (Docker)" {
+  node "**web**\nnginx:alpine\nport 8080 -> 80\nserves the Vite bundle\nhealthcheck: wget /" as web
+  node "**api**\ndistroless static\nport 3000\nHTTP + executor + reconciler\nhealthcheck: /api healthcheck\n(GET /health, DB ping)\nstop_grace_period 30s" as api
+  node "**payment-mock**\ndistroless static\nport 4000\ncreates schema payment_mock\nhealthcheck: /payment-mock healthcheck" as mock
+  node "**migrate**\none-shot" as migrate
+  node "**seed**\none-shot" as seed
+  database "**postgres**\npostgis/postgis:17-3.5\nlinux/amd64, port 5432\nhealthcheck: pg_isready over TCP" as pg
+  storage "volume pgdata" as vol
+}
+cloud "Anthropic API\n(only with ANTHROPIC_API_KEY)" as claude
+
+pg -- vol
+migrate --> pg : (1) starts when postgres is healthy
+seed --> pg : (2) starts when migrate exited 0
+mock --> pg : starts when postgres is healthy
+api --> pg : (3) starts when seed exited 0
+api --> mock : (4) and payment-mock is healthy
+web --> api : (5) starts when api is healthy\nproxies /api/* (timeout 180s)
+api ..> claude : HTTPS
+@enduml

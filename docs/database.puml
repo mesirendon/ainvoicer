@@ -1,0 +1,145 @@
+@startuml database
+title Database (public schema)
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+hide circle
+hide methods
+skinparam linetype ortho
+
+class suppliers {
+  * id : uuid <<PK>>
+  name : text
+  tax_id : text
+  country : text
+  currency : text
+  bank_account : text
+  payment_net_days : int
+  early_discount_bps : int
+  early_discount_days : int
+}
+
+class warehouses {
+  * id : uuid <<PK>>
+  supplier_id : uuid <<FK>>
+  name, city, country : text
+  location : geography(Point,4326) <<GiST>>
+}
+
+class purchase_orders {
+  * id : uuid <<PK>>
+  po_number : text <<UNIQUE>>
+  supplier_id : uuid <<FK>>
+  currency : text
+  status : OPEN | CLOSED
+}
+
+class po_lines {
+  * po_id : uuid <<PK, FK>>
+  * line_no : int <<PK>>
+  sku, description : text
+  quantity : bigint
+  unit_price_minor : bigint
+}
+
+class goods_receipts {
+  * id : uuid <<PK>>
+  po_id : uuid <<FK>>
+  warehouse_id : uuid <<FK>>
+  received_on : date
+}
+
+class receipt_lines {
+  * receipt_id : uuid <<PK, FK>>
+  * sku : text <<PK>>
+  quantity_received : bigint
+}
+
+class invoices {
+  * id : uuid <<PK>>
+  file_sha256 : text <<UNIQUE>>
+  file : bytea
+  supplier_id : uuid <<FK, null>>
+  po_id : uuid <<FK, null>>
+  duplicate_of : uuid <<FK, null>>
+  invoice_number, currency : text
+  subtotal/tax/total_minor : bigint
+  issue_date, due_date : date
+  ship_from_location : geography
+  extraction : jsonb
+  status : text
+  unique : supplier_id + invoice_number
+  .. only where duplicate_of IS NULL ..
+}
+
+class invoice_lines {
+  * invoice_id : uuid <<PK, FK>>
+  * line_no : int <<PK>>
+  po_line_no : int
+  sku, description : text
+  quantity, unit_price_minor,
+  line_total_minor : bigint
+}
+
+class findings {
+  * id : bigint <<PK>>
+  invoice_id : uuid <<FK>>
+  line_no : int
+  code : text
+  severity : WARNING | BLOCK
+  expected, actual, message : text
+}
+
+class payments {
+  * id : uuid <<PK>> = idempotency key
+  invoice_id : uuid <<UNIQUE, FK>>
+  status : SCHEDULED | PROCESSING |
+  PAID | FAILED | UNKNOWN
+  amount_minor, discount_minor : bigint
+  scheduled_for : date
+  funding_currency : text
+  fx_rate_e8 : bigint
+  fx_spread_bps : int
+  funding_amount_minor : bigint
+  processor_payment_id, error : text
+  updated_at : timestamptz (lease)
+}
+
+class fx_rates {
+  * base : text <<PK>>
+  * quote : text <<PK>>
+  rate_e8 : bigint
+  spread_bps : int
+}
+
+class audit_log {
+  * id : bigint <<PK>>
+  invoice_id : uuid <<FK>>
+  actor, action : text
+  detail : jsonb
+  created_at : timestamptz
+}
+
+class demo_clock {
+  * id : int <<PK>> = 1
+  offset_days : int
+}
+
+class schema_migrations {
+  * version : text <<PK>>
+  applied_at : timestamptz
+}
+
+suppliers "1" -- "*" warehouses
+suppliers "1" -- "*" purchase_orders
+purchase_orders "1" -- "*" po_lines
+purchase_orders "1" -- "*" goods_receipts
+warehouses "1" -- "*" goods_receipts
+goods_receipts "1" -- "*" receipt_lines
+suppliers "0..1" -- "*" invoices
+purchase_orders "0..1" -- "*" invoices
+invoices "1" -- "*" invoice_lines
+invoices "1" -- "*" findings
+invoices "1" -- "0..1" payments
+invoices "1" -- "*" audit_log
+invoices "0..1" -- "*" invoices : duplicate_of
+@enduml

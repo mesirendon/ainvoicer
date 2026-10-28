@@ -1,0 +1,80 @@
+@startuml sequence-payment-execution
+title Payment execution: happy path, decline, timeout + lookup, UNKNOWN -> reconciler
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+
+participant "Executor\n(every 5s)" as X
+participant "Reconciler\n(every 10s)" as RC
+participant repo as R
+database Postgres as DB
+participant "HTTPGateway" as GW
+participant "payment-mock" as PM
+
+group Transaction: ClaimDuePayments (one at a time)
+  X -> R : ClaimDuePayments(1)
+  R -> DB : SELECT ... WHERE status='SCHEDULED' AND scheduled_for <= demo today\nFOR UPDATE SKIP LOCKED LIMIT 1
+  R -> DB : UPDATE status='PROCESSING', updated_at=now(); audit
+end
+note over X, PM : No transaction open during HTTP calls. Idempotency-Key = payment id.
+
+alt happy path (4242...)
+  X -> GW : Pay (3s timeout)
+  GW -> PM : POST /payments
+  PM --> GW : 200 SUCCEEDED
+  X -> R : SettlePayment(PAID)
+else decline (0000...)
+  X -> GW : Pay
+  GW -> PM : POST /payments
+  PM --> GW : 402 DECLINED
+  note right of X : never retried
+  X -> R : SettlePayment(FAILED, declined)
+else timeout, then lookup (1111...)
+  loop up to 3 attempts, backoff 0.5s, 1s
+    X -> GW : Pay (3s timeout)
+    GW -> PM : POST /payments
+    note right of PM : records SUCCEEDED,\nthen sleeps 10s
+    GW --> X : ErrTransient (deadline)
+  end
+  X -> GW : Lookup(payment id)
+  GW -> PM : GET /payments/:key
+  PM --> GW : 200 SUCCEEDED
+  X -> R : SettlePayment(PAID)
+else lookup unreachable (2222...)
+  loop up to 3 attempts
+    X -> GW : Pay
+    GW -> PM : POST /payments
+    note right of PM : sleeps 10s, records nothing\n(in-flight marker only)
+    GW --> X : ErrTransient
+  end
+  X -> GW : Lookup
+  GW -> PM : GET /payments/:key
+  note right of PM : in flight: also hangs
+  GW --> X : ErrTransient
+  X -> R : SettlePayment(UNKNOWN)
+end
+
+group Transaction: SettlePayment
+  R -> DB : UPDATE payments ... WHERE id=$1 AND status='PROCESSING'
+  R -> DB : UPDATE invoices ... WHERE status IN ('PAYMENT_SCHEDULED','PAYMENT_UNKNOWN')
+  R -> DB : INSERT audit_log
+end
+
+== later: reconciler ==
+group Transaction: ClaimStalePayments
+  RC -> R : ClaimStalePayments
+  R -> DB : SELECT ... WHERE status IN ('UNKNOWN','PROCESSING')\nAND updated_at < now() - LEASE_SECONDS\nFOR UPDATE SKIP LOCKED
+  R -> DB : UPDATE status='PROCESSING', updated_at=now()
+end
+RC -> GW : Lookup(payment id)
+GW -> PM : GET /payments/:key
+alt SUCCEEDED
+  RC -> R : SettlePayment(PAID)
+else NOT_FOUND and was UNKNOWN
+  RC -> R : SettlePayment(FAILED)
+else NOT_FOUND and was stale PROCESSING
+  RC -> R : SettlePayment(SCHEDULED)
+  note right of RC : never reached the provider;\nretried with the same key
+else still unreachable
+  RC -> R : SettlePayment(UNKNOWN)
+end
+@enduml

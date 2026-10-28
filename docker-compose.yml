@@ -51,6 +51,7 @@ services:
       <<: *db-env
       PAYMENT_MOCK_URL: http://payment-mock:4000
       SAMPLES_DIR: /samples
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "3000:3000"
     depends_on:

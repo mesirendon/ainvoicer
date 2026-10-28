@@ -1,0 +1,71 @@
+@startuml sequence-invoice-pipeline
+title Invoice pipeline: upload to verdict to scheduled payment
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+autonumber
+
+actor User
+participant "Handler\n(httpapi)" as H
+participant "invoices.Service" as S
+participant "Extractor" as E
+participant "Claude API" as C
+participant "Geocoder" as G
+participant "repo" as R
+participant "invoices.Rules\n(pure)" as RU
+database Postgres as DB
+
+User -> H : POST /api/invoices (PDF)
+H -> H : size cap, %PDF- check
+H -> S : Process(file, bytes)
+S -> S : sha256(bytes)
+
+group Transaction 1: SaveReceivedInvoice
+  S -> R : SaveReceivedInvoice
+  R -> DB : INSERT invoices ... ON CONFLICT (file_sha256) DO NOTHING RETURNING id
+  alt same file already stored
+    R -> DB : UPDATE ... SET status='RECEIVED'\nWHERE status='EXTRACTION_FAILED' OR stale RECEIVED
+    note right : otherwise return existing invoice (200)
+  end
+  R -> DB : INSERT audit_log (received)
+end
+
+note over S, C : No transaction open: detached from the request, own timeouts
+S -> E : Extract(ctx 60s)
+E -> C : document block + record_invoice tool (strict)
+C --> E : tool_use input (amounts as printed)
+alt validation fails
+  E -> C : tool_result is_error + reason (one retry)
+  C --> E : corrected tool_use
+end
+E --> S : ExtractedInvoice (int64 minor units)
+alt extraction failed after retry
+  S -> R : MarkExtractionFailed (own transaction)
+  S --> H : 422 / 502 / 504 with invoiceId
+end
+S -> G : Geocode(ship-from, ctx 2s)
+G --> S : point (or nil -> ORIGIN_UNVERIFIED)
+
+group Transaction 2: ApplyVerdict
+  S -> R : ApplyVerdict(invoice, point, rules)
+  R -> DB : SELECT invoice FOR UPDATE
+  R -> DB : SELECT supplier FOR UPDATE
+  R -> DB : SELECT purchase_order FOR UPDATE + lines
+  R -> DB : find duplicate (supplier, number)
+  R -> DB : UPDATE invoice header + ship_from_location
+  R -> DB : receipts, already invoiced,\nST_Distance to nearest warehouse
+  R -> RU : Decide(matching.Input)
+  RU --> R : findings + verdict + autoApprove
+  R -> DB : INSERT invoice_lines, findings\nUPDATE status = verdict, audit
+  opt MATCHED and AUTO_APPROVE_CLEAN
+    R -> DB : supplier terms, fx rate, demo today
+    R -> RU : PlanPayment(...)
+    RU --> R : pay date, discount, FX quote
+    R -> DB : UPDATE status APPROVED (conditional), audit
+    R -> DB : INSERT payments (SCHEDULED)\nUPDATE status PAYMENT_SCHEDULED, audit
+  end
+end
+
+S -> R : GetInvoice (REPEATABLE READ, read only)
+S --> H : detail
+H --> User : 201 Created
+@enduml

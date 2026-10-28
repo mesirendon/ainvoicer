@@ -103,6 +103,9 @@ func (c Config) validate() []error {
 	if c.PriceToleranceBps < 0 || c.PriceToleranceBps > 10000 {
 		errs = append(errs, fmt.Errorf("PRICE_TOLERANCE_BPS must be between 0 and 10000, got %d", c.PriceToleranceBps))
 	}
+	if c.LeaseSeconds < 20 {
+		errs = append(errs, fmt.Errorf("LEASE_SECONDS must be at least 20 so a slow payment (3 attempts x 3s + backoff + lookup) is never re-claimed while still running, got %d", c.LeaseSeconds))
+	}
 	if c.DBLockTimeoutMS >= c.DBStatementTimeoutMS || c.DBStatementTimeoutMS >= c.DBIdleInTxTimeoutMS {
 		errs = append(errs, errors.New("DB timeouts must satisfy DB_LOCK_TIMEOUT_MS < DB_STATEMENT_TIMEOUT_MS < DB_IDLE_IN_TX_TIMEOUT_MS"))
 	}

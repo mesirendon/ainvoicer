@@ -1,0 +1,75 @@
+@startuml components
+title AP agent: components and connectors
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Helvetica
+left to right direction
+
+actor "Finance user" as user
+
+node "web (nginx)" {
+  [Vue SPA\nInvoices · Detail · Payments] as spa
+}
+
+node "api (Go)" {
+  package "httpapi" {
+    [Gin router\nRequestID → AccessLog → Recover] as router
+    [Handlers + error mapping] as handlers
+  }
+  package "services" {
+    [invoices.Service\nupload → extract → geocode → verdict] as invsvc
+    [invoices.Rules\nDecide · PlanPayment] as rules
+    [clock.Service] as clocksvc
+  }
+  package "pure rules" {
+    [matching\n3-way match] as matching
+    [payments.ScheduleFor\nterms · discount] as schedule
+    [fx.Convert\nbig.Int quote] as fx
+    [money\nParseMinor · FormatMinor] as money
+  }
+  package "jobs" {
+    [payments.Executor\nTick every 5s] as executor
+    [payments.Reconciler\nTick every 10s] as reconciler
+  }
+  package "adapters" {
+    [ClaudeExtractor / FixtureExtractor] as extractor
+    [TableGeocoder] as geocoder
+    [HTTPGateway] as gateway
+  }
+  [repo\nall SQL, transactions, locks] as repo
+}
+
+node "payment-mock (Go)" {
+  [POST /payments\nGET /payments/:key] as mock
+}
+
+database "postgres + PostGIS" {
+  [public schema] as pub
+  [payment_mock schema] as pm
+}
+
+cloud "Anthropic API" as claude
+
+user --> spa : browser
+spa --> router : /api/* (JSON)
+router --> handlers
+handlers --> invsvc
+handlers --> clocksvc
+handlers --> executor : run-due
+invsvc --> extractor
+invsvc --> geocoder
+invsvc --> repo
+repo --> rules : calls inside its transaction
+rules --> matching
+rules --> schedule
+rules --> fx
+fx --> money
+extractor --> claude : PDF + strict tool\n(no key: fixtures)
+executor --> repo
+reconciler --> repo
+executor --> gateway
+reconciler --> gateway
+gateway --> mock : HTTP, Idempotency-Key
+repo --> pub : pgx
+mock --> pm : pgx
+@enduml
