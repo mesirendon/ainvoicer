@@ -124,6 +124,7 @@ export interface InvoiceDetail {
   status: InvoiceStatus
   supplierId: string
   supplierName: string
+  supplierCountry: string
   invoiceNumber: string
   poNumber: string
   currency: string
@@ -143,6 +144,13 @@ export interface InvoiceDetail {
   purchaseOrder: PurchaseOrder | null
   payment: Payment | null
   audit: AuditEntry[]
+}
+
+export interface EmailDraft {
+  subject: string
+  body: string
+  language: 'en' | 'es'
+  generatedBy: 'claude' | 'template'
 }
 
 export interface PaymentSummary extends Payment {

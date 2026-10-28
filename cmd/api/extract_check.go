@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"ap-agent/internal/config"
+	"ap-agent/internal/emaildraft"
 	"ap-agent/internal/extraction"
 	"ap-agent/internal/invoices"
 )
@@ -19,6 +20,13 @@ func newExtractor(cfg config.Config) invoices.Extractor {
 		return extraction.NewFixtureExtractor(cfg.SamplesDir)
 	}
 	return extraction.NewClaudeExtractor(cfg.AnthropicAPIKey, cfg.AnthropicModel)
+}
+
+func newDrafter(cfg config.Config) invoices.Drafter {
+	if cfg.FixtureMode() {
+		return emaildraft.TemplateDrafter{}
+	}
+	return emaildraft.NewClaudeDrafter(cfg.AnthropicAPIKey, cfg.AnthropicModel)
 }
 
 func extractCheck(cfg config.Config, path string) error {

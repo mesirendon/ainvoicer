@@ -28,6 +28,7 @@ func loadInvoiceDetail(ctx context.Context, q db.Querier, id string) (invoices.D
 	err := q.QueryRow(ctx, `
 		SELECT i.id, i.file_name, i.status,
 		       i.supplier_id, COALESCE(s.name, i.extraction->>'supplier_name', ''),
+		       COALESCE(s.country, ''),
 		       i.invoice_number, i.po_id, COALESCE(po.po_number, i.extraction->>'po_number', ''),
 		       i.currency, i.subtotal_minor, i.tax_minor, i.total_minor,
 		       i.issue_date, i.due_date, i.ship_from_city, i.ship_from_country,
@@ -37,7 +38,7 @@ func loadInvoiceDetail(ctx context.Context, q db.Querier, id string) (invoices.D
 		LEFT JOIN purchase_orders po ON po.id = i.po_id
 		WHERE i.id = $1`, id).Scan(
 		&d.ID, &d.FileName, &d.Status,
-		&supplierID, &d.SupplierName,
+		&supplierID, &d.SupplierName, &d.SupplierCountry,
 		&d.InvoiceNumber, &poID, &d.PONumber,
 		&d.Currency, &d.SubtotalMinor, &d.TaxMinor, &d.TotalMinor,
 		&issueDate, &dueDate, &d.ShipFromCity, &d.ShipFromCountry,

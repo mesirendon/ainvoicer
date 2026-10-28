@@ -49,6 +49,19 @@ func (h *handlers) reject(c *gin.Context) {
 	c.JSON(http.StatusOK, detail)
 }
 
+func (h *handlers) supplierEmail(c *gin.Context) {
+	id, ok := invoiceID(c)
+	if !ok {
+		return
+	}
+	draft, err := h.deps.Invoices.DraftSupplierEmail(c.Request.Context(), id)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, draft)
+}
+
 func (h *handlers) reasonFor(c *gin.Context) (string, reasonRequest, bool) {
 	id, ok := invoiceID(c)
 	if !ok {

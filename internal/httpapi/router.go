@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"ap-agent/internal/clock"
+	"ap-agent/internal/emaildraft"
 	"ap-agent/internal/invoices"
 	"ap-agent/internal/payments"
 )
@@ -24,6 +25,7 @@ type InvoiceService interface {
 	Approve(ctx context.Context, id string) (invoices.Detail, error)
 	Override(ctx context.Context, id, reason string) (invoices.Detail, error)
 	Reject(ctx context.Context, id, reason string) (invoices.Detail, error)
+	DraftSupplierEmail(ctx context.Context, id string) (emaildraft.Draft, error)
 }
 
 type SampleService interface {
@@ -94,6 +96,7 @@ func NewRouter(d Deps) *gin.Engine {
 	api.POST("/invoices/:id/approve", h.approve)
 	api.POST("/invoices/:id/override", h.override)
 	api.POST("/invoices/:id/reject", h.reject)
+	api.POST("/invoices/:id/supplier-email", h.supplierEmail)
 	api.GET("/samples", h.listSamples)
 	api.POST("/samples/:name/process", h.processSample)
 	api.GET("/purchase-orders", h.listPurchaseOrders)

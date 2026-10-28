@@ -33,6 +33,7 @@ node "api (Go)" {
   }
   package "adapters" {
     [ClaudeExtractor / FixtureExtractor] as extractor
+    [ClaudeDrafter / TemplateDrafter\nsupplier email draft] as drafter
     [TableGeocoder] as geocoder
     [HTTPGateway] as gateway
   }
@@ -58,6 +59,7 @@ handlers --> clocksvc
 handlers --> executor : run-due
 invsvc --> extractor
 invsvc --> geocoder
+invsvc --> drafter
 invsvc --> repo
 repo --> rules : calls inside its transaction
 rules --> matching
@@ -65,6 +67,7 @@ rules --> schedule
 rules --> fx
 fx --> money
 extractor --> claude : PDF + strict tool\n(no key: fixtures)
+drafter --> claude : findings only\n(no key: template)
 executor --> repo
 reconciler --> repo
 executor --> gateway

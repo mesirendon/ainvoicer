@@ -74,6 +74,8 @@ func run(cfg config.Config) error {
 		Store:     store,
 		Extractor: newExtractor(cfg),
 		Geocoder:  geocode.TableGeocoder{},
+		Drafter:   newDrafter(cfg),
+		BuyerName: cfg.BuyerName,
 		Rules: invoices.Rules{
 			Tolerances:       matching.Tolerances{PriceBps: cfg.PriceToleranceBps, OriginKM: cfg.OriginToleranceKM},
 			AutoApproveClean: cfg.AutoApproveClean,
@@ -81,6 +83,7 @@ func run(cfg config.Config) error {
 		},
 		ExtractTimeout: time.Duration(cfg.ExtractTimeoutMS) * time.Millisecond,
 		GeocodeTimeout: time.Duration(cfg.GeocoderTimeoutMS) * time.Millisecond,
+		DraftTimeout:   20 * time.Second,
 		SamplesDir:     cfg.SamplesDir,
 	}
 	gateway := &payments.HTTPGateway{BaseURL: cfg.PaymentMockURL, Client: &http.Client{}}

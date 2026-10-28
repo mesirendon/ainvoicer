@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"ap-agent/internal/emaildraft"
 	"ap-agent/internal/invoices"
 )
 
@@ -89,5 +91,38 @@ func TestActions_BadID(t *testing.T) {
 	for _, action := range []string{"approve", "override", "reject"} {
 		rec := a.do(t, http.MethodPost, "/api/invoices/nope/"+action, bytes.NewBufferString(`{"reason":"x"}`), "application/json")
 		assert.Equal(t, http.StatusNotFound, rec.Code, action)
+	}
+}
+
+func TestSupplierEmail(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		wantStatus int
+		wantCode   string
+	}{
+		{"draft returned", nil, http.StatusOK, ""},
+		{"no blocking findings", invoices.ErrNoBlockingFindings, http.StatusUnprocessableEntity, "NO_BLOCKING_FINDINGS"},
+		{"invoice not on hold", fmt.Errorf("%w: this one is PAID", invoices.ErrConflict), http.StatusConflict, "INVALID_STATE"},
+		{"unknown invoice", invoices.ErrNotFound, http.StatusNotFound, "NOT_FOUND"},
+		{"claude timeout", fmt.Errorf("%w: %w", invoices.ErrDraftUnavailable, context.DeadlineExceeded), http.StatusGatewayTimeout, "DRAFT_TIMEOUT"},
+		{"claude failure", fmt.Errorf("%w: 500", invoices.ErrDraftUnavailable), http.StatusBadGateway, "DRAFT_UNAVAILABLE"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newTestAPI(t)
+			a.inv.EXPECT().DraftSupplierEmail(mock.Anything, testID).
+				Return(emaildraft.Draft{Subject: "Invoice on hold", Body: "Hello", Language: "en", GeneratedBy: "template"}, tt.err).Once()
+
+			rec := a.do(t, http.MethodPost, "/api/invoices/"+testID+"/supplier-email", nil, "")
+
+			assert.Equal(t, tt.wantStatus, rec.Code)
+			if tt.wantCode == "" {
+				assert.JSONEq(t, `{"subject":"Invoice on hold","body":"Hello","language":"en","generatedBy":"template"}`, rec.Body.String())
+				return
+			}
+			code, _ := errorCode(t, rec)
+			assert.Equal(t, tt.wantCode, code)
+		})
 	}
 }

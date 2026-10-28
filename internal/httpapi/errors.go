@@ -41,6 +41,12 @@ func handleError(c *gin.Context, err error) {
 		WriteError(c, http.StatusUnprocessableEntity, "REASON_REQUIRED", err.Error(), nil)
 	case errors.Is(err, invoices.ErrCannotSchedule):
 		WriteError(c, http.StatusUnprocessableEntity, "CANNOT_SCHEDULE", err.Error(), nil)
+	case errors.Is(err, invoices.ErrNoBlockingFindings):
+		WriteError(c, http.StatusUnprocessableEntity, "NO_BLOCKING_FINDINGS", err.Error(), nil)
+	case errors.Is(err, invoices.ErrDraftUnavailable) && errors.Is(err, context.DeadlineExceeded):
+		WriteError(c, http.StatusGatewayTimeout, "DRAFT_TIMEOUT", "the drafting service did not answer in time", nil)
+	case errors.Is(err, invoices.ErrDraftUnavailable):
+		WriteError(c, http.StatusBadGateway, "DRAFT_UNAVAILABLE", err.Error(), nil)
 	case errors.As(err, &extractionErr):
 		details := gin.H{"invoiceId": extractionErr.InvoiceID}
 		switch {

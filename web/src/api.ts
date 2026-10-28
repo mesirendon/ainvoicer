@@ -1,5 +1,6 @@
 import type {
   Clock,
+  EmailDraft,
   InvoiceDetail,
   InvoiceSummary,
   Meta,
@@ -59,6 +60,7 @@ export const api = {
   approve: (id: string) => post<InvoiceDetail>(`/invoices/${id}/approve`),
   override: (id: string, reason: string) => post<InvoiceDetail>(`/invoices/${id}/override`, { reason }),
   reject: (id: string, reason: string) => post<InvoiceDetail>(`/invoices/${id}/reject`, { reason }),
+  supplierEmail: (id: string) => post<EmailDraft>(`/invoices/${id}/supplier-email`),
 
   samples: () => request<Sample[]>('/samples'),
   processSample: (name: string) => post<InvoiceDetail>(`/samples/${encodeURIComponent(name)}/process`),

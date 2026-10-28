@@ -465,6 +465,14 @@ tr.clickable:hover {
   gap: 8px;
 }
 
+.email {
+  width: 100%;
+  margin: 4px 0 8px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
 .modal textarea {
   width: 100%;
   resize: vertical;

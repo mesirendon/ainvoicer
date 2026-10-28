@@ -75,7 +75,7 @@ Open http://localhost:8080 and process the samples from the **Try a sample** dro
 | 2 | `02-factura-mxn-discount` | Spanish factura (Folio / IVA, dd/mm/yyyy dates). The supplier offers 2/10 net 30 and the window is open, so it pays on the **last day of the discount window** and saves 3,967.20 MXN. |
 | 3 | `03-price-variance` | Unit price 8% above the PO. **BLOCKED** `PRICE_VARIANCE`, with the price cell in red. Try **Reject…** (a reason is required). |
 | 4 | `04-qty-exceeds-received` | Bills 80 valves; 50 were received. **BLOCKED** `QTY_EXCEEDS_RECEIVED`. The message states ordered / received / already invoiced / this invoice. Try **Override…** with a reason. |
-| 5 | `05-duplicate-number` | A different PDF with the same invoice number as sample 1. **BLOCKED** `DUPLICATE_INVOICE`, linked to the original. Only **Reject** is offered: overriding a duplicate would pay twice. |
+| 5 | `05-duplicate-number` | A different PDF with the same invoice number as sample 1. **BLOCKED** `DUPLICATE_INVOICE`, linked to the original. Only **Reject** is offered: overriding a duplicate would pay twice. Click **Draft email to supplier** to get a draft explaining the blocking findings. |
 | 6 | `06-price-within-tolerance` | Price 1% above the PO: `PRICE_VARIANCE_WITHIN_TOLERANCE` warning, **waits for a human**. **Approve** it. This supplier's account starts with `1111`, which exercises the provider timeout path later. |
 | 7 | `07-eur-partial-receipt` | German supplier, EUR, billing only what the first of two partial receipts covered. **MATCHED** and scheduled. Both receipts are listed under the match table. |
 | 8 | `08-origin-mismatch` | Ships from New York; the receiving warehouse is Dallas (about 2,200 km). `ORIGIN_MISMATCH` warning computed with PostGIS `ST_Distance`. Approve it. |
@@ -182,6 +182,10 @@ stateDiagram-v2
 - **The demo clock** is a product feature: a day offset stored in `demo_clock` and added to the UTC date. Scheduling, due checks and the executor use it; there is no test seam. Code that needs a fixed time in tests uses a package-level `var now = time.Now`.
 - **Database session limits are set per connection:** lock < statement < idle-in-transaction timeouts, validated at startup. Lock and statement timeouts map to `503 DATABASE_BUSY` with `Retry-After: 1`.
 - **The runtime images are distroless.** Healthchecks are a `healthcheck` subcommand of each binary rather than `wget`. `/health` is also served at `/api/health`, so the web can reach it through the same proxy.
+- **Supplier email drafts.** On a BLOCKED invoice, **Draft email to supplier** (`POST /api/invoices/:id/supplier-email`) returns a short email asking for a corrected invoice.
+  - **Facts:** it uses only the stored findings (our deterministic messages) plus the supplier, invoice and PO numbers. The prompt forbids inventing amounts, dates or payment promises.
+  - **How it's generated:** with a key, Claude writes it through a strict `draft_email` tool, in Spanish for suppliers in Spanish-speaking countries and in English otherwise. In fixture mode, a deterministic English template is used.
+  - **Nothing is stored or sent.** The UI labels it as a draft, in an editable box with a Copy button.
 - **The payment mock stores the full destination account.** The provider is the regulated party that holds payment details. Our API and both services only ever log the last 4 digits.
 
 ## What was cut or simplified
@@ -192,6 +196,7 @@ These are deliberate, for a two-day demo:
 - **Every currency is treated as 2 decimals.** There's no JPY or KWD handling.
 - **Amount format:** amounts must be printed as `1,250.00` (optional symbol, comma thousands, 0–2 decimals). `1.250,00` and 3+ decimals are rejected as extraction errors. The samples, including the German one, use the accepted format.
 - **Fixture mode only knows the committed samples,** looked up by file name. Any other PDF needs an API key.
+- **The fixture-mode email template is English only.** Spanish drafts need the Claude path.
 - **No refusal fallback is configured for Claude.** It would mean switching the extractor to the beta API, and a refused extraction simply fails with a clear error.
 
 **Matching and approvals**
@@ -221,7 +226,6 @@ These are deliberate, for a two-day demo:
 - A geocoding failure produces a new warning code, `ORIGIN_UNVERIFIED`.
 - The seed has **6 suppliers and 7 POs.** The extra supplier and PO cover the declined `0000` path, and keeping one PO (or set of PO lines) per scenario means the scenarios can run in any order.
 
-**Not done:** the stretch feature, a Claude-drafted email to the supplier about blocking findings.
 
 ## What a real customer deployment would integrate
 
@@ -245,6 +249,7 @@ All endpoints are under `/api` and return JSON. Errors look like `{"error":{"cod
 | POST | `/invoices` | multipart `file`. 201 created, 200 same file, 422 validation or extraction, 502/504 Claude |
 | GET | `/invoices`, `/invoices/:id`, `/invoices/:id/file` | list; detail (lines, findings, PO + receipts, payment, audit); the PDF |
 | POST | `/invoices/:id/approve`, `/override {reason}`, `/reject {reason}` | 409 if the status doesn't allow it |
+| POST | `/invoices/:id/supplier-email` | draft email about blocking findings (not stored, not sent); 409 unless BLOCKED, 422 if there are none, 502/504 Claude |
 | GET / POST | `/samples`, `/samples/:name/process` | committed sample PDFs through the upload path |
 | GET | `/purchase-orders`, `/payments`, `/meta`, `/demo/clock`, `/health` | |
 | POST | `/payments/run-due`, `/demo/advance-days {days}`, `/demo/reset` | demo controls |

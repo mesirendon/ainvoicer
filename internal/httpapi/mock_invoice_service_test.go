@@ -5,6 +5,7 @@
 package httpapi
 
 import (
+	"ap-agent/internal/emaildraft"
 	"ap-agent/internal/invoices"
 	"context"
 
@@ -109,6 +110,72 @@ func (_c *MockInvoiceService_Approve_Call) Return(detail invoices.Detail, err er
 }
 
 func (_c *MockInvoiceService_Approve_Call) RunAndReturn(run func(ctx context.Context, id string) (invoices.Detail, error)) *MockInvoiceService_Approve_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DraftSupplierEmail provides a mock function for the type MockInvoiceService
+func (_mock *MockInvoiceService) DraftSupplierEmail(ctx context.Context, id string) (emaildraft.Draft, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DraftSupplierEmail")
+	}
+
+	var r0 emaildraft.Draft
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (emaildraft.Draft, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) emaildraft.Draft); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(emaildraft.Draft)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockInvoiceService_DraftSupplierEmail_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DraftSupplierEmail'
+type MockInvoiceService_DraftSupplierEmail_Call struct {
+	*mock.Call
+}
+
+// DraftSupplierEmail is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+func (_e *MockInvoiceService_Expecter) DraftSupplierEmail(ctx any, id any) *MockInvoiceService_DraftSupplierEmail_Call {
+	return &MockInvoiceService_DraftSupplierEmail_Call{Call: _e.mock.On("DraftSupplierEmail", ctx, id)}
+}
+
+func (_c *MockInvoiceService_DraftSupplierEmail_Call) Run(run func(ctx context.Context, id string)) *MockInvoiceService_DraftSupplierEmail_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockInvoiceService_DraftSupplierEmail_Call) Return(draft emaildraft.Draft, err error) *MockInvoiceService_DraftSupplierEmail_Call {
+	_c.Call.Return(draft, err)
+	return _c
+}
+
+func (_c *MockInvoiceService_DraftSupplierEmail_Call) RunAndReturn(run func(ctx context.Context, id string) (emaildraft.Draft, error)) *MockInvoiceService_DraftSupplierEmail_Call {
 	_c.Call.Return(run)
 	return _c
 }

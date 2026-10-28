@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"ap-agent/internal/emaildraft"
 	"ap-agent/internal/extraction"
 	"ap-agent/internal/geocode"
 )
@@ -32,13 +33,20 @@ type Store interface {
 	InvoiceFile(ctx context.Context, id string) (string, []byte, error)
 }
 
+type Drafter interface {
+	Draft(ctx context.Context, in emaildraft.Input) (emaildraft.Draft, error)
+}
+
 type Service struct {
 	Store          Store
 	Extractor      Extractor
 	Geocoder       Geocoder
+	Drafter        Drafter
+	BuyerName      string
 	Rules          Rules
 	ExtractTimeout time.Duration
 	GeocodeTimeout time.Duration
+	DraftTimeout   time.Duration
 	SamplesDir     string
 }
 

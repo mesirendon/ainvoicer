@@ -29,6 +29,8 @@ The diagrams in [docs/](docs) show the same flows visually:
    - If the payment can't be planned (no FX rate, nothing left to pay), the invoice stays `MATCHED` with an `auto_approval_skipped` audit entry.
 7. **Respond.** The detail is read in one read-only `REPEATABLE READ` snapshot and returned with 201.
 
+**Supplier email draft** (`POST /api/invoices/:id/supplier-email`) is a read plus an LLM call, with no transaction open during the call. It reads the invoice (409 unless it is BLOCKED), keeps only the BLOCK findings (422 if there are none), and asks the `Drafter` for a subject and body: Claude with a strict tool and one retry if it doesn't call the tool, or the template in fixture mode. It has its own 20s timeout. Nothing is written; the draft is only returned.
+
 **Human decisions** (`/approve`, `/override`, `/reject`) are one transaction each. A conditional status update guards the transition. Approve and override schedule the payment inside the same transaction, through the same `planPayment` and `schedulePayment` functions the agent uses.
 
 **Payments** run in two background loops inside the API process, plus `POST /api/payments/run-due` for the demo:
@@ -75,6 +77,7 @@ Every API connection sets three limits: `lock_timeout` (5s) < `statement_timeout
 | Geocoder fails or times out | Geocode step | Match continues. WARNING `ORIGIN_UNVERIFIED`, so the invoice waits for a human. | A reviewer approves or rejects. |
 | Same file uploaded concurrently | Transaction 1 | Exactly one invoice (`ON CONFLICT`); the others get it with 200 | Nothing to do (checked by `make demo`: 10 parallel uploads). |
 | Same supplier and invoice number, different files, concurrently | `ApplyVerdict` | The supplier row lock serializes them. The second is BLOCKED `DUPLICATE_INVOICE` with `duplicate_of`; the unique index is the backstop. | Reject the duplicate. Override is refused, because it would pay twice. |
+| Claude fails or times out while drafting a supplier email | `ClaudeDrafter`, no transaction open | None: nothing is stored | API 502 / 504. Click **Draft again**. |
 | Lock or statement timeout | Any transaction | Transaction rolled back, state unchanged | API 503 `DATABASE_BUSY` + `Retry-After: 1`; the client retries. |
 | No FX rate, or nothing left to pay after discount or rounding | `PlanPayment` | Auto path: stays `MATCHED` + `auto_approval_skipped` audit. Human approve: 422 `CANNOT_SCHEDULE`, nothing written. | Add the rate (or fix the terms), then approve. |
 | Two reviewers act at once | Approve / override / reject | First wins (conditional update); the second gets 409 `INVALID_STATE` with the current status | The UI refetches and shows the new state. |

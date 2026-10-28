@@ -152,6 +152,14 @@ func TestMatch_Messages(t *testing.T) {
 	assert.Equal(t, "Ship-from New York is 2206 km from the receiving warehouse Dallas DC (Dallas), more than the 100 km tolerance.", origin.Message)
 }
 
+func TestMatch_DuplicateMessageHasNoInternalID(t *testing.T) {
+	in := cleanInput()
+	in.DuplicateOf = "11111111-2222-4333-8444-555555555555"
+	got := Match(in, tol)
+	require.NotEmpty(t, got.Findings)
+	assert.Equal(t, "Invoice INV-1 from this supplier was already received; this is a second copy.", got.Findings[0].Message)
+}
+
 func TestMatch_QuantityExpectedNeverNegative(t *testing.T) {
 	in := cleanInput()
 	in.PreviouslyInvoiced["A"] = 120

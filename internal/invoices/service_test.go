@@ -26,14 +26,17 @@ type mocks struct {
 	store     *MockStore
 	extractor *MockExtractor
 	geocoder  *MockGeocoder
+	drafter   *MockDrafter
 }
 
 func newService(t *testing.T) (*Service, mocks) {
-	m := mocks{store: NewMockStore(t), extractor: NewMockExtractor(t), geocoder: NewMockGeocoder(t)}
+	m := mocks{store: NewMockStore(t), extractor: NewMockExtractor(t), geocoder: NewMockGeocoder(t), drafter: NewMockDrafter(t)}
 	return &Service{
 		Store:     m.store,
 		Extractor: m.extractor,
 		Geocoder:  m.geocoder,
+		Drafter:   m.drafter,
+		BuyerName: "Andes Retail S.A.S.",
 		Rules: Rules{
 			Tolerances:       matching.Tolerances{PriceBps: 200, OriginKM: 100},
 			AutoApproveClean: true,
@@ -41,6 +44,7 @@ func newService(t *testing.T) (*Service, mocks) {
 		},
 		ExtractTimeout: time.Second,
 		GeocodeTimeout: time.Second,
+		DraftTimeout:   time.Second,
 	}, m
 }
 

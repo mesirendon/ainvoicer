@@ -19,7 +19,7 @@ func Match(in Input, tol Tolerances) Result {
 	}
 	if in.DuplicateOf != "" {
 		r.block(0, "DUPLICATE_INVOICE", "a new invoice number", inv.Number,
-			fmt.Sprintf("Invoice %s from this supplier was already received (invoice %s).", inv.Number, in.DuplicateOf))
+			fmt.Sprintf("Invoice %s from this supplier was already received; this is a second copy.", inv.Number))
 	}
 	if in.PO == nil {
 		if inv.PONumber == "" {

@@ -61,6 +61,7 @@ type Detail struct {
 	Status          string          `json:"status"`
 	SupplierID      string          `json:"supplierId"`
 	SupplierName    string          `json:"supplierName"`
+	SupplierCountry string          `json:"supplierCountry"`
 	InvoiceNumber   string          `json:"invoiceNumber"`
 	PONumber        string          `json:"poNumber"`
 	Currency        string          `json:"currency"`

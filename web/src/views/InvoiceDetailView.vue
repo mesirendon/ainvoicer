@@ -7,6 +7,7 @@ import MatchTable from '../components/MatchTable.vue'
 import PaymentCard from '../components/PaymentCard.vue'
 import ReasonModal from '../components/ReasonModal.vue'
 import StatusBadge from '../components/StatusBadge.vue'
+import SupplierEmailCard from '../components/SupplierEmailCard.vue'
 import { humanize, money } from '../format'
 import type { InvoiceDetail } from '../types'
 
@@ -22,6 +23,9 @@ const moving = ['RECEIVED', 'PAYMENT_SCHEDULED', 'PAYMENT_UNKNOWN']
 
 const canApprove = computed(() => ['MATCHED', 'MATCHED_WITH_WARNINGS'].includes(invoice.value?.status ?? ''))
 const canOverride = computed(() => invoice.value?.status === 'BLOCKED' && !invoice.value.duplicateOf)
+const canDraftEmail = computed(
+  () => invoice.value?.status === 'BLOCKED' && invoice.value.findings.some((f) => f.severity === 'BLOCK'),
+)
 const canReject = computed(() =>
   ['MATCHED', 'MATCHED_WITH_WARNINGS', 'BLOCKED', 'EXTRACTION_FAILED'].includes(invoice.value?.status ?? ''),
 )
@@ -141,6 +145,8 @@ onUnmounted(() => window.clearInterval(timer))
             Clean 3-way match: invoice, purchase order and goods receipts agree.
           </p>
         </section>
+
+        <SupplierEmailCard v-if="canDraftEmail" :invoice-id="invoice.id" />
 
         <section v-if="invoice.lines.length > 0" class="card">
           <h2>3-way match</h2>
