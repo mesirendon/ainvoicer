@@ -28,7 +28,7 @@ type printed struct {
 }
 
 func main() {
-	today := flag.String("today", time.Now().Format(time.DateOnly), "date the samples are generated for, YYYY-MM-DD")
+	today := flag.String("today", time.Now().UTC().Format(time.DateOnly), "date the samples are generated for, YYYY-MM-DD (UTC, matching the demo clock)")
 	out := flag.String("out", "samples", "output directory")
 	flag.Parse()
 

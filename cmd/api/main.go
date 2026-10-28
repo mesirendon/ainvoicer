@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
+	"ap-agent/internal/clock"
 	"ap-agent/internal/config"
 	"ap-agent/internal/db"
 	"ap-agent/internal/geocode"
@@ -17,6 +19,7 @@ import (
 	"ap-agent/internal/httpapi"
 	"ap-agent/internal/invoices"
 	"ap-agent/internal/matching"
+	"ap-agent/internal/payments"
 	"ap-agent/internal/repo"
 )
 
@@ -80,11 +83,32 @@ func run(cfg config.Config) error {
 		GeocodeTimeout: time.Duration(cfg.GeocoderTimeoutMS) * time.Millisecond,
 		SamplesDir:     cfg.SamplesDir,
 	}
+	gateway := &payments.HTTPGateway{BaseURL: cfg.PaymentMockURL, Client: &http.Client{}}
+	executor := &payments.Executor{
+		Store:       store,
+		Gateway:     gateway,
+		BatchSize:   10,
+		CallTimeout: 3 * time.Second,
+		MaxAttempts: 3,
+		Backoff:     500 * time.Millisecond,
+	}
+	reconciler := &payments.Reconciler{Store: store, Gateway: gateway, BatchSize: 10, CallTimeout: 3 * time.Second}
+
 	router := httpapi.NewRouter(httpapi.Deps{
 		Health:         pool,
 		Invoices:       service,
 		Samples:        service,
 		PurchaseOrders: store,
+		Payments:       store,
+		Executor:       executor,
+		Demo:           &clock.Service{Store: store},
+		Meta: httpapi.Meta{
+			FixtureMode:     cfg.FixtureMode(),
+			Model:           cfg.AnthropicModel,
+			BuyerName:       cfg.BuyerName,
+			BuyerCountry:    cfg.BuyerCountry,
+			FundingCurrency: cfg.BuyerBaseCurrency,
+		},
 		MaxUploadBytes: int64(cfg.ExtractMaxFileMB) << 20,
 	})
 
@@ -93,6 +117,14 @@ func run(cfg config.Config) error {
 		Handler:           router,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	var jobs sync.WaitGroup
+	startJob(ctx, &jobs, "executor", time.Duration(cfg.ExecuteIntervalMS)*time.Millisecond, executor.Tick)
+	startJob(ctx, &jobs, "reconciler", time.Duration(cfg.ReconcileIntervalMS)*time.Millisecond, reconciler.Tick)
+
 	slog.Info("api starting", "fixture_mode", cfg.FixtureMode())
-	return httpapi.Serve(ctx, server)
+	serveErr := httpapi.Serve(ctx, server)
+	stop()
+	jobs.Wait()
+	slog.Info("background jobs stopped")
+	return serveErr
 }

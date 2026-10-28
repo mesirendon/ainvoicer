@@ -15,8 +15,15 @@ packages:
       InvoiceService: {}
       SampleService: {}
       PurchaseOrderService: {}
+      PaymentLister: {}
+      DueRunner: {}
+      DemoService: {}
   ap-agent/internal/invoices:
     interfaces:
       Extractor: {}
       Geocoder: {}
+      Store: {}
+  ap-agent/internal/payments:
+    interfaces:
+      Gateway: {}
       Store: {}

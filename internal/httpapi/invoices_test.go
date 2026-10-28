@@ -23,19 +23,33 @@ import (
 const testID = "11111111-2222-4333-8444-555555555555"
 
 type testAPI struct {
-	router  http.Handler
-	inv     *MockInvoiceService
-	samples *MockSampleService
-	pos     *MockPurchaseOrderService
+	router   http.Handler
+	inv      *MockInvoiceService
+	samples  *MockSampleService
+	pos      *MockPurchaseOrderService
+	payments *MockPaymentLister
+	executor *MockDueRunner
+	demo     *MockDemoService
 }
 
 func newTestAPI(t *testing.T) testAPI {
-	a := testAPI{inv: NewMockInvoiceService(t), samples: NewMockSampleService(t), pos: NewMockPurchaseOrderService(t)}
+	a := testAPI{
+		inv:      NewMockInvoiceService(t),
+		samples:  NewMockSampleService(t),
+		pos:      NewMockPurchaseOrderService(t),
+		payments: NewMockPaymentLister(t),
+		executor: NewMockDueRunner(t),
+		demo:     NewMockDemoService(t),
+	}
 	a.router = NewRouter(Deps{
 		Health:         NewMockHealthChecker(t),
 		Invoices:       a.inv,
 		Samples:        a.samples,
 		PurchaseOrders: a.pos,
+		Payments:       a.payments,
+		Executor:       a.executor,
+		Demo:           a.demo,
+		Meta:           Meta{FixtureMode: true, Model: "claude-sonnet-5-5", BuyerName: "Andes Retail S.A.S.", BuyerCountry: "CO", FundingCurrency: "COP"},
 		MaxUploadBytes: 1 << 20,
 	})
 	return a

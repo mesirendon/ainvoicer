@@ -7,7 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"ap-agent/internal/clock"
 	"ap-agent/internal/invoices"
+	"ap-agent/internal/payments"
 )
 
 type HealthChecker interface {
@@ -33,11 +35,37 @@ type PurchaseOrderService interface {
 	ListPurchaseOrders(ctx context.Context) ([]invoices.PurchaseOrder, error)
 }
 
+type PaymentLister interface {
+	ListPayments(ctx context.Context) ([]payments.Summary, error)
+}
+
+type DueRunner interface {
+	Tick(ctx context.Context) error
+}
+
+type DemoService interface {
+	Now(ctx context.Context) (clock.Clock, error)
+	Advance(ctx context.Context, days int) (clock.Clock, error)
+	Reset(ctx context.Context) (clock.Clock, error)
+}
+
+type Meta struct {
+	FixtureMode     bool   `json:"fixtureMode"`
+	Model           string `json:"model"`
+	BuyerName       string `json:"buyerName"`
+	BuyerCountry    string `json:"buyerCountry"`
+	FundingCurrency string `json:"fundingCurrency"`
+}
+
 type Deps struct {
 	Health         HealthChecker
 	Invoices       InvoiceService
 	Samples        SampleService
 	PurchaseOrders PurchaseOrderService
+	Payments       PaymentLister
+	Executor       DueRunner
+	Demo           DemoService
+	Meta           Meta
 	MaxUploadBytes int64
 }
 
@@ -69,6 +97,12 @@ func NewRouter(d Deps) *gin.Engine {
 	api.GET("/samples", h.listSamples)
 	api.POST("/samples/:name/process", h.processSample)
 	api.GET("/purchase-orders", h.listPurchaseOrders)
+	api.GET("/payments", h.listPayments)
+	api.POST("/payments/run-due", h.runDue)
+	api.GET("/demo/clock", h.demoClock)
+	api.POST("/demo/advance-days", h.advanceDays)
+	api.POST("/demo/reset", h.resetDemo)
+	api.GET("/meta", func(c *gin.Context) { c.JSON(http.StatusOK, d.Meta) })
 	return router
 }
 

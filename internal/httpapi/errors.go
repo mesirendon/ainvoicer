@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"ap-agent/internal/clock"
 	"ap-agent/internal/db"
 	"ap-agent/internal/extraction"
 	"ap-agent/internal/invoices"
@@ -34,6 +35,8 @@ func handleError(c *gin.Context, err error) {
 		WriteError(c, http.StatusNotFound, "NOT_FOUND", "not found", nil)
 	case errors.Is(err, invoices.ErrConflict):
 		WriteError(c, http.StatusConflict, "INVALID_STATE", err.Error(), nil)
+	case errors.Is(err, clock.ErrInvalidDays):
+		WriteError(c, http.StatusUnprocessableEntity, "INVALID_DAYS", err.Error(), nil)
 	case errors.Is(err, invoices.ErrReasonRequired):
 		WriteError(c, http.StatusUnprocessableEntity, "REASON_REQUIRED", err.Error(), nil)
 	case errors.Is(err, invoices.ErrCannotSchedule):
