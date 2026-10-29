@@ -1,5 +1,7 @@
 # AP Agent: cross-border supplier invoices
 
+Every month, finance teams receive supplier invoices as PDFs in different languages, formats and currencies, and someone has to check each one against the purchase order and the goods actually received before paying. It’s slow, and mistakes are expensive: overpaying a price, paying for goods that never arrived, paying the same invoice twice, or losing track of a payment that timed out. _**AI**_nvoicer automates that whole chain. Claude reads the invoice, and deterministic code checks it three ways against the PO and the receipts. Clean invoices are approved and scheduled automatically, taking early-payment discounts when they pay off and quoting FX for cross-border suppliers. Anything suspicious goes to a human with the exact reason, and payments are built so a crash or a timeout can never lose or duplicate money. In short: unstructured invoice in, safe, correct, on-time cross-border payment out, with people only where judgment is needed.
+
 ![AP Agent promo](ainvoicer-promo.gif)
 
 A demo accounts-payable agent for a LatAm business that pays international suppliers. A finance user uploads a supplier invoice (PDF, English or Spanish). The agent:
@@ -60,6 +62,7 @@ go run ./cmd/api extract-check samples/02-factura-mxn-discount.pdf          # pr
 ```
 
 **What is tested:**
+
 - **Pure packages, table-driven:** `money`, `matching`, `fx`, and `payments.ScheduleFor`. These cover every matching, scheduling, rounding and overflow rule.
 - **Orchestration, with mockery mocks:**
   - the invoice pipeline (`Extractor`, `Geocoder`, `Store`);
@@ -69,7 +72,8 @@ go run ./cmd/api extract-check samples/02-factura-mxn-discount.pdf          # pr
 
 ## How it works page
 
-**How it works** in the header (http://localhost:8080/about) is interactive documentation for the whole project:
+**How it works** in the header (<http://localhost:8080/about>) is interactive documentation for the whole project:
+
 - **Scenario player:** pick any of the 10 samples and watch it travel through the nine pipeline stages, from Upload to Settle. Each step shows that sample's real data: amounts as printed vs `int64` minor units, the finding message, the integer tolerance math, the FX quote, the provider's answer.
 - **Live architecture map:** the components taking part in the current step light up, and the connections between them animate. Clicking any component explains what it does and where it lives in the code.
 - **Run this sample for real:** processes the actual sample and opens its invoice detail.
@@ -79,20 +83,20 @@ This is a fourth view on top of the three in the brief, added as an explanation 
 
 ## Sample walkthrough
 
-Open http://localhost:8080 and process the samples from the **Try a sample** dropdown in this order. Each one goes through the same path as an upload.
+Open <http://localhost:8080> and process the samples from the **Try a sample** dropdown in this order. Each one goes through the same path as an upload.
 
-| # | Sample | What to look at |
-|---|---|---|
-| 1 | `01-clean-usd` | Clean 3-way match. **Auto-approved** by the agent and scheduled for the due date. The payment card shows the FX quote: 5,582.50 USD → 22,553,300.00 COP (4,000.00 + 1.00% spread). |
-| 2 | `02-factura-mxn-discount` | Spanish factura (Folio / IVA, dd/mm/yyyy dates). The supplier offers 2/10 net 30 and the window is open, so it pays on the **last day of the discount window** and saves 3,967.20 MXN. |
-| 3 | `03-price-variance` | Unit price 8% above the PO. **BLOCKED** `PRICE_VARIANCE`, with the price cell in red. Try **Reject…** (a reason is required). |
-| 4 | `04-qty-exceeds-received` | Bills 80 valves; 50 were received. **BLOCKED** `QTY_EXCEEDS_RECEIVED`. The message states ordered / received / already invoiced / this invoice. Try **Override…** with a reason. |
-| 5 | `05-duplicate-number` | A different PDF with the same invoice number as sample 1. **BLOCKED** `DUPLICATE_INVOICE`, linked to the original. Only **Reject** is offered: overriding a duplicate would pay twice. Click **Draft email to supplier** to get a draft explaining the blocking findings. |
-| 6 | `06-price-within-tolerance` | Price 1% above the PO: `PRICE_VARIANCE_WITHIN_TOLERANCE` warning, **waits for a human**. **Approve** it. This supplier's account starts with `1111`, which exercises the provider timeout path later. |
-| 7 | `07-eur-partial-receipt` | German supplier, EUR, billing only what the first of two partial receipts covered. **MATCHED** and scheduled. Both receipts are listed under the match table. |
-| 8 | `08-origin-mismatch` | Ships from New York; the receiving warehouse is Dallas (about 2,200 km). `ORIGIN_MISMATCH` warning computed with PostGIS `ST_Distance`. Approve it. |
-| 9 | `09-payment-unknown` | Clean invoice whose supplier account starts with `2222` (provider never answers). |
-| 10 | `10-payment-declined` | Clean invoice whose supplier account starts with `0000` (bank declines). |
+| #   | Sample                      | What to look at                                                                                                                                                                                                                                                           |
+| --- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `01-clean-usd`              | Clean 3-way match. **Auto-approved** by the agent and scheduled for the due date. The payment card shows the FX quote: 5,582.50 USD → 22,553,300.00 COP (4,000.00 + 1.00% spread).                                                                                        |
+| 2   | `02-factura-mxn-discount`   | Spanish factura (Folio / IVA, dd/mm/yyyy dates). The supplier offers 2/10 net 30 and the window is open, so it pays on the **last day of the discount window** and saves 3,967.20 MXN.                                                                                    |
+| 3   | `03-price-variance`         | Unit price 8% above the PO. **BLOCKED** `PRICE_VARIANCE`, with the price cell in red. Try **Reject…** (a reason is required).                                                                                                                                             |
+| 4   | `04-qty-exceeds-received`   | Bills 80 valves; 50 were received. **BLOCKED** `QTY_EXCEEDS_RECEIVED`. The message states ordered / received / already invoiced / this invoice. Try **Override…** with a reason.                                                                                          |
+| 5   | `05-duplicate-number`       | A different PDF with the same invoice number as sample 1. **BLOCKED** `DUPLICATE_INVOICE`, linked to the original. Only **Reject** is offered: overriding a duplicate would pay twice. Click **Draft email to supplier** to get a draft explaining the blocking findings. |
+| 6   | `06-price-within-tolerance` | Price 1% above the PO: `PRICE_VARIANCE_WITHIN_TOLERANCE` warning, **waits for a human**. **Approve** it. This supplier's account starts with `1111`, which exercises the provider timeout path later.                                                                     |
+| 7   | `07-eur-partial-receipt`    | German supplier, EUR, billing only what the first of two partial receipts covered. **MATCHED** and scheduled. Both receipts are listed under the match table.                                                                                                             |
+| 8   | `08-origin-mismatch`        | Ships from New York; the receiving warehouse is Dallas (about 2,200 km). `ORIGIN_MISMATCH` warning computed with PostGIS `ST_Distance`. Approve it.                                                                                                                       |
+| 9   | `09-payment-unknown`        | Clean invoice whose supplier account starts with `2222` (provider never answers).                                                                                                                                                                                         |
+| 10  | `10-payment-declined`       | Clean invoice whose supplier account starts with `0000` (bank declines).                                                                                                                                                                                                  |
 
 Then open **Payments & demo**:
 
@@ -117,6 +121,7 @@ Then open **Payments & demo**:
 - **`web/`**: Vue 3 + strict TypeScript, three views, plain CSS, served by nginx, which proxies `/api/`.
 
 Diagrams (PlantUML sources next to each PNG):
+
 - [components](docs/components.png)
 - [invoice pipeline sequence](docs/sequence-invoice-pipeline.png)
 - [payment execution sequence](docs/sequence-payment-execution.png)
@@ -205,6 +210,7 @@ stateDiagram-v2
 These are deliberate, for a two-day demo:
 
 **Money and extraction**
+
 - **Every currency is treated as 2 decimals.** There's no JPY or KWD handling.
 - **Amount format:** amounts must be printed as `1,250.00` (optional symbol, comma thousands, 0–2 decimals). `1.250,00` and 3+ decimals are rejected as extraction errors. The samples, including the German one, use the accepted format.
 - **Fixture mode only knows the committed samples,** looked up by file name. Any other PDF needs an API key.
@@ -212,6 +218,7 @@ These are deliberate, for a two-day demo:
 - **No refusal fallback is configured for Claude.** It would mean switching the extractor to the beta API, and a refused extraction simply fails with a clear error.
 
 **Matching and approvals**
+
 - **The geocoder is a lookup table** with a deterministic hash fallback inside a per-country bounding box.
 - **Payment terms come from the supplier master data,** not from the terms text printed on the invoice.
 - **There is one buyer,** configured by environment variables.
@@ -224,20 +231,22 @@ These are deliberate, for a two-day demo:
 - **What counts as "already invoiced":** every invoice on the PO except rejected ones, failed extractions and duplicates.
 
 **Payments**
+
 - **FX rates are static seed data.** There's no live rate feed, and a quote isn't locked with a provider.
 - **No retry or re-pay action** for FAILED payments, no partial payments, no credit notes.
 - **`run-due` is synchronous.** It can take about 15s when timing-out accounts are due. The background executor pays due payments every 5s anyway.
 
 **Infrastructure and data**
+
 - **Uploaded PDFs are stored in a `bytea` column.** Production would use object storage.
 - **Extraction is synchronous on upload,** behind a spinner. Only payments are asynchronous.
 - **`GET /api/purchase-orders` runs a few queries per PO.** That's fine for 7 POs, not for thousands.
 
 **Error codes and data shape**
+
 - An oversized upload returns `422 FILE_TOO_LARGE`, to stay within the brief's list of status codes.
 - A geocoding failure produces a new warning code, `ORIGIN_UNVERIFIED`.
 - The seed has **6 suppliers and 7 POs.** The extra supplier and PO cover the declined `0000` path, and keeping one PO (or set of PO lines) per scenario means the scenarios can run in any order.
-
 
 ## What a real customer deployment would integrate
 
@@ -256,14 +265,14 @@ These are deliberate, for a two-day demo:
 
 All endpoints are under `/api` and return JSON. Errors look like `{"error":{"code","message","details?"}}`. Amounts are integers in minor units.
 
-| Method | Path | Notes |
-|---|---|---|
-| POST | `/invoices` | multipart `file`. 201 created, 200 same file, 422 validation or extraction, 502/504 Claude |
-| GET | `/invoices`, `/invoices/:id`, `/invoices/:id/file` | list; detail (lines, findings, PO + receipts, payment, audit); the PDF |
-| POST | `/invoices/:id/approve`, `/override {reason}`, `/reject {reason}` | 409 if the status doesn't allow it |
-| POST | `/invoices/:id/supplier-email` | draft email about blocking findings (not stored, not sent); 409 unless BLOCKED, 422 if there are none, 502/504 Claude |
-| GET / POST | `/samples`, `/samples/:name/process` | committed sample PDFs through the upload path |
-| GET | `/purchase-orders`, `/payments`, `/meta`, `/demo/clock`, `/health` | |
-| POST | `/payments/run-due`, `/demo/advance-days {days}`, `/demo/reset` | demo controls |
+| Method     | Path                                                               | Notes                                                                                                                 |
+| ---------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| POST       | `/invoices`                                                        | multipart `file`. 201 created, 200 same file, 422 validation or extraction, 502/504 Claude                            |
+| GET        | `/invoices`, `/invoices/:id`, `/invoices/:id/file`                 | list; detail (lines, findings, PO + receipts, payment, audit); the PDF                                                |
+| POST       | `/invoices/:id/approve`, `/override {reason}`, `/reject {reason}`  | 409 if the status doesn't allow it                                                                                    |
+| POST       | `/invoices/:id/supplier-email`                                     | draft email about blocking findings (not stored, not sent); 409 unless BLOCKED, 422 if there are none, 502/504 Claude |
+| GET / POST | `/samples`, `/samples/:name/process`                               | committed sample PDFs through the upload path                                                                         |
+| GET        | `/purchase-orders`, `/payments`, `/meta`, `/demo/clock`, `/health` |                                                                                                                       |
+| POST       | `/payments/run-due`, `/demo/advance-days {days}`, `/demo/reset`    | demo controls                                                                                                         |
 
 Configuration is environment-only and validated at startup. Every variable is documented in [.env.example](.env.example).
