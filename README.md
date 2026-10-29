@@ -276,3 +276,9 @@ All endpoints are under `/api` and return JSON. Errors look like `{"error":{"cod
 | POST       | `/payments/run-due`, `/demo/advance-days {days}`, `/demo/reset`    | demo controls                                                                                                         |
 
 Configuration is environment-only and validated at startup. Every variable is documented in [.env.example](.env.example).
+
+## License
+
+Copyright (c) 2026 Mesi Rendon. All rights reserved.
+
+This repository is shared only so that my work can be evaluated. You may view, clone and run it for that purpose. Any other use, including commercial use, redistribution, derivative works or competing products, requires my written consent. See [LICENSE](LICENSE) for the full terms, or write to hello@mesirendon.com about licensing.
