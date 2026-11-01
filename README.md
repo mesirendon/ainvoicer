@@ -43,7 +43,7 @@ make down     # stop and delete the database volume
 
 > **Apple Silicon:** `postgis/postgis` only ships `linux/amd64`, so compose runs it under emulation (`platform: linux/amd64`). It works, but the first start is slower.
 
-> **Sample dates are relative.** The sample invoices are dated relative to the day they were generated, so discount windows and due dates make sense. Before presenting, regenerate them with `go run ./cmd/genfixtures` (UTC date, deterministic), then `make up`.
+> **Sample dates are relative.** The sample invoices and the seeded goods receipts are dated relative to "day 1", the day the samples were generated, so discount windows and due dates make sense. Before presenting, run `go run ./cmd/genfixtures` (UTC date, deterministic). It regenerates the samples and pins day 1 in `cmd/seed/day1_gen.go`. Then run `make down && make up`, because the seed never updates rows that already exist.
 
 ## Develop: lint, tests, mocks
 
@@ -111,7 +111,7 @@ Then open **Payments & demo**:
 - **`cmd/api`**: HTTP API (Gin) plus two background jobs, the payment executor and the reconciler.
 - **`cmd/payment-mock`**: a separate service standing in for the payment provider. It has its own `payment_mock` schema, which the API never reads.
 - **`cmd/migrate`, `cmd/seed`**: one-shot jobs. Migrations are embedded SQL under an advisory lock. The seed is idempotent, using `ON CONFLICT DO NOTHING` and fixed UUIDs.
-- **`cmd/genfixtures`**: generates the sample PDFs (fpdf, three layouts) and their expected JSON from the same data.
+- **`cmd/genfixtures`**: generates the sample PDFs (fpdf, three layouts) and their expected JSON from the same data, and writes `cmd/seed/day1_gen.go` so the seed's receipt dates line up with the invoice dates.
 - **`internal/`**:
   - **Pure rules:** `money`, `matching`, `fx`, `payments/schedule.go`.
   - **Orchestration:** `invoices`, `payments`, `clock`.

@@ -3,11 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
 
 func seed(ctx context.Context, tx pgx.Tx) error {
+	day1, err := time.Parse(time.DateOnly, demoDay1)
+	if err != nil {
+		return fmt.Errorf("parse demo day 1: %w", err)
+	}
 	for _, s := range suppliers {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO suppliers (id, name, tax_id, country, currency, bank_account, payment_net_days, early_discount_bps, early_discount_days)
@@ -53,7 +58,7 @@ func seed(ctx context.Context, tx pgx.Tx) error {
 			INSERT INTO goods_receipts (id, po_id, warehouse_id, received_on)
 			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (id) DO NOTHING`,
-			r.id, r.poID, r.warehouseID, r.receivedOn)
+			r.id, r.poID, r.warehouseID, day1.AddDate(0, 0, r.receivedOffset).Format(time.DateOnly))
 		if err != nil {
 			return fmt.Errorf("insert receipt %s: %w", r.id, err)
 		}
